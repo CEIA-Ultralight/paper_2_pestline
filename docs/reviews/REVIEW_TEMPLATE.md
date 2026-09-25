@@ -1,4 +1,4 @@
-# Review — CVPR 2027 (OpenReview form)
+# Review — VISAPP 2027 (PRIMORIS form)
 
 **Reviewer:** R{k} — {persona}
 **Round:** {NN} · **Paper version:** {git short hash or date}
@@ -34,8 +34,14 @@
 - Limitations discussed adequately: {yes/partial/no}
 - Data/code assets properly cited: {yes/partial/no}
 - Anonymity / formatting violations noticed: {none | list}
-- Numbers consistent with `PAPER_FACTS.md`: {yes | list discrepancies}
+- Numbers consistent with `docs/PAPER_FACTS.md` (see FACTCHECK.md): {yes | list discrepancies}
 - Ethics flag: {none | describe}
+
+## 8b. VISAPP reviewer questions (yes / partial / no)
+- Abstract and Introduction are adequate? · Needs more experimental results? · Needs comparative evaluation? · Improve critical discussion? · Figures are adequate? · Conclusions/Future Work are convincing? · References are up-to-date and appropriate? · Paper formatting needs adjustment? · Improve English?
+
+## 8c. Progress on previous-round fixes
+{For each `F{NN-1}-k` in docs/LEDGER.md you can judge: resolved / partial / regressed / not addressed.}
 
 ## 9. Additional comments (typos, figures, wording)
 - …

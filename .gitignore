@@ -237,3 +237,5 @@ slurm_logs/
 *.synctex.gz
 # figures/out é gerado a partir de */results/*.csv — versionar só PDFs finais pequenos
 figures/out/*.png
+_scratch/*
+!_scratch/.gitkeep

@@ -70,6 +70,28 @@ cd manuscript && git pull            # puxar edições feitas na web do Overleaf
 git commit -am "..." && git push     # Overleaf; depois `git add manuscript` aqui para avançar o ponteiro
 ```
 
+## Agentes (VS Code / Copilot — `.github/agents/`)
+
+Abra o repo no VS Code e escolha o agente no seletor, ou use os prompts `/rq`, `/lit`, `/review-round`.
+Regras globais herdadas por todos em `.github/copilot-instructions.md`.
+
+| Agente | Papel | Escreve em |
+|---|---|---|
+| **orchestrator** (default) | decompõe a tarefa por RQ, delega, consolida, pede aprovação; mantém `rq*/README.md`, `docs/LEDGER.md`, `docs/DECISIONS.md` | READMEs, LEDGER, DECISIONS |
+| **scholar** | literatura: busca, verifica, posiciona, BibTeX | `docs/related_work_map.md`, `manuscript/main.bib` |
+| **experimenter** | código dos experimentos sobre `fly_det`; testes CPU | `rq*/*.py`, `common/`, `tests/` |
+| **slurm-runner** | **único** que submete GPU (sbatch h100n2); registra job → run | `rq*/slurm/`, `rq*/results/runs.md` |
+| **analyst** | W&B → CSV, média±std, McNemar; guardião do PAPER_FACTS | `rq*/results/*.csv`, `docs/PAPER_FACTS.md` |
+| **illustrator** | figuras/tabelas geradas só a partir de CSV | `figures/`, `manuscript/{fig,tab}/` |
+| **writer** | seções `.tex`, fixes aprovados, compilação | `manuscript/sec/`, `main.tex` |
+| **fact-checker** | cruza `.tex` × PAPER_FACTS × CSV × `.bib` | `docs/reviews/round-NN/FACTCHECK.md` |
+| **reviewer-{applied-detection, data-reproducibility, rigor-stats, domain-practitioner, writing-visapp}** | mesa redonda VISAPP (R1–R5), só ao fim de um ciclo | `docs/reviews/round-NN/R*.md`, `docs/reviews/personas/R*.md` |
+| **area-chair** | meta-review, decisão, fixes com ID | `META.md`, `docs/LEDGER.md` |
+
+Cadeia de custódia dos números: `slurm-runner` → `analyst` → `illustrator`/`writer` → `fact-checker`.
+Memória compartilhada: `rq*/README.md` (backlog), `rq*/results/runs.md`, `docs/PAPER_FACTS.md`,
+`docs/related_work_map.md`, `docs/LEDGER.md`, `docs/DECISIONS.md`, `docs/reviews/personas/`.
+
 ## Convenções
 
 - Branch de trabalho: `dev`. `main` só recebe merge revisado.
