@@ -1,0 +1,6 @@
+[submodule "manuscript"]
+	path = manuscript
+	url = https://git.overleaf.com/6ab5bbabb525d334d1b32b7d
+[submodule "baseline"]
+	path = baseline
+	url = https://github.com/CEIA-Ultralight/fly-det

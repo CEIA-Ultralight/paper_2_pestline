@@ -1,0 +1,6 @@
+# Lightweight Slurm status queries only; no GPU/ML work on the login node.
+# Bounded to jobs 32005/32009 and 72 hours by monitor_architecture.py.
+SHELL=/bin/bash
+PATH=/usr/bin:/bin
+MAILTO=""
+*/10 * * * * /usr/bin/python3 /raid/user_marcospaulo/fly-det/fly-det/scripts/monitor_architecture.py >> /raid/user_marcospaulo/flydet_runs/architecture-monitor/cron.log 2>&1

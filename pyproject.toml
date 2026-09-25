@@ -1,0 +1,39 @@
+[project]
+name = "paper2-pestline"
+version = "0.1.0"
+description = "Experimentos do paper 2 (VISAPP 2027): species-level fly monitoring on industrial sticky traps — código organizado por questão de pesquisa sobre o baseline fly-det."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+# O baseline (pacote fly_det: trainer, sahi_inference, model_backend…) vem do submodule
+# baseline/ (fly-det pinado). Ultralytics/torch/torchvision são deps transitivas dele.
+dependencies = [
+    "fly-det-utils",
+    "wandb",
+    "pandas",
+    "matplotlib",
+    "scikit-learn",
+    "opencv-python",
+    "PyYAML",
+    "Pillow",
+    "numpy>2.1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.5"]
+# rq2_cascade/sam_clean_crops.py
+sam = ["segment-anything"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+fly-det-utils = { path = "baseline/fly-det", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

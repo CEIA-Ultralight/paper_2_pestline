@@ -216,3 +216,24 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- paper_2_pestline: artefatos pesados ficam em /raid e no W&B, nunca no git ----
+runs/
+wandb/
+*.pt
+*.pth
+*.onnx
+*.sif
+datasets/
+slurm_logs/
+*.err
+*.out
+# LaTeX build (o manuscrito é o submodule manuscript/)
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+# figures/out é gerado a partir de */results/*.csv — versionar só PDFs finais pequenos
+figures/out/*.png

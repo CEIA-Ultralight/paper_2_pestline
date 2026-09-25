@@ -1,0 +1,71 @@
+Bootstrap: docker
+From: nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04
+
+%arguments
+    TORCH_INDEX_URL=https://download.pytorch.org/whl/cu124
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export TZ=America/Sao_Paulo
+    export PYTHONUNBUFFERED=1
+    export PATH="/opt/venv/bin:$PATH"
+    # Caches no /raid (regra do cluster: nada de cache na home)
+    export WANDB_DIR="${WANDB_DIR:-/raid/user_marcospaulo/wandb}"
+    export HF_HOME="${HF_HOME:-/raid/user_marcospaulo/.cache/huggingface}"
+    export TORCH_HOME="${TORCH_HOME:-/raid/user_marcospaulo/.cache/torch}"
+    export PIP_CACHE_DIR="${PIP_CACHE_DIR:-/raid/user_marcospaulo/.cache/pip}"
+
+%post
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    TZ=America/Sao_Paulo
+
+    apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-venv python3-dev \
+        git ffmpeg tzdata ca-certificates \
+        libgl1 libglib2.0-0 curl \
+     && ln -sf /usr/share/zoneinfo/$TZ /etc/localtime \
+     && echo $TZ > /etc/timezone \
+     && rm -rf /var/lib/apt/lists/*
+
+    # venv isolado
+    python3 -m venv /opt/venv
+    export PATH="/opt/venv/bin:$PATH"
+
+    # uv
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
+
+    # constraints PyTorch (cu124, compativel com drivers CUDA 12.4)
+    printf '%s\n' \
+      'torch==2.6.0' \
+      'torchvision==0.21.0' \
+      'torchaudio==2.6.0' \
+      > /tmp/torch-constraints.txt
+
+    uv pip install --no-cache -c /tmp/torch-constraints.txt \
+      torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 \
+      --index-url https://download.pytorch.org/whl/cu124
+
+    # pacote fly-det (com wandb)
+    uv pip install --no-cache -c /tmp/torch-constraints.txt "/opt/src/fly-det[wandb]"
+
+    # Ultralytics / Albumentations / W&B explicitos
+    uv pip install --no-cache -c /tmp/torch-constraints.txt \
+      "ultralytics>=8.3.228" "albumentations>=2.0.3" wandb
+
+    mkdir -p /workspace/models /workspace/runs /data
+
+%files
+    # copia o pacote fly-det inteiro do contexto de build (raiz fly-det/fly-det)
+    fly_det /opt/src/fly-det/fly_det
+    pyproject.toml /opt/src/fly-det/pyproject.toml
+    README.md /opt/src/fly-det/README.md
+
+%runscript
+    export PATH="/opt/venv/bin:$PATH"
+    exec fly-det-train "$@"
+
+%labels
+    Author fly-det
+    Project pestline
+    Description "Container de treino fly-det (YOLO26/Ultralytics + W&B), CUDA 12.4, torch 2.6"

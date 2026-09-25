@@ -1,0 +1,429 @@
+A Data-Centric Pipeline for Microscale Insect
+Detection in Industrial Sticky Traps
+Marcos P. C. M. Queiroz1, Lucas Carvalho Pacheco2, Leandro D. Carneiro3,
+André L. S. Meirelles4, Lucas A. O. Isaac1, Stephany Jorge A. Resque1,
+Thaynara Mábille Marques Ribeiro1, and Iwens Sene1
+1 Institute of Informatics, Federal University of Goiás, Goiânia, Brazil
+marcospaulocmq429@gmail.com, lucasaoisaac100@gmail.com, {stephanyjorge,
+thaynara_mabille}@discente.ufg.br, iwens@ufg.br
+2 Institute of Informatics, PUC-Goiás, Goiânia, Brazil
+lcpacheco14@gmail.com
+3 Department of Computer Science, University of Brasília, Distrito Federal, Brazil
+leandropcdf@gmail.com
+4 Independent Researcher, Brasília, Brazil
+alsmeirelles@gmail.com
+Abstract.Industrial pest control is critical to food safety yet remains
+largely manual, with inspectors visually counting insects in sticky traps.
+This process is slow, expensive, non-scalable, and prone to high human
+error. Automating this task via Computer Vision faces severe small ob-
+ject detection challenges, such as the obliteration of morphological de-
+tails due to feature vanishing, severe background clutter from industrial
+debris mimicking biological targets, and specimen occlusion caused by
+natural crowding on the adhesive surface. The literature presents two
+competing approaches: model-centric methods enhancing architecture
+and volume-centric methods expanding data through synthetic augmen-
+tation. However, neither systematically evaluates the impact of capture
+environment standardization on detection performance. This work pro-
+posesadata-centricpipelineprioritizingphysicalcapturecontrol,dataset
+curation, and ontological refinement. Using an identical YOLO architec-
+ture across all experiments, we evaluate the evolution of the Sticky Trap
+Insect Dataset family across its distinct curation stages. Results show
+mAP@0.5 improvements from 0.476 to 0.608 on the smallest model vari-
+ant (YOLO26-S) achieved exclusively through data engineering, provid-
+ing robust empirical evidence that capture standardization and dataset
+quality are the primary performance bottlenecks in microscale object
+detection, fundamentally superseding architectural innovation.
+Keywords:Pest Control·Computer Vision·Small Object Detection
+1 Introduction
+Pest control in food-processing industries is strictly regulated by frameworks like
+ISO22000:2018[1]andHazardAnalysisandCriticalControlPoints(HACCP)[2].
+2 M. P. C. M. Queiroz et al.
+Compliance currently relies on the manual inspection of sticky traps [3], a slow,
+non-scalable process with error rates up to 30% due to cognitive fatigue [4].
+While Computer Vision offers an automated alternative, it faces severe Small
+Object Detection (SOD) challenges because the targets are ultra-small. Primary
+obstacles include “feature vanishing” during network downsampling [5], back-
+ground clutter from adhesive residues that visually mimic insects, and specimen
+occlusion caused by natural crowding on the traps.
+The literature addresses SOD through three competing approaches. Model-
+centric methods propose increasingly sophisticated architectures: lightweight
+YOLO variants optimized for embedded inference [6], NMS-free training com-
+bined with SPD-Conv modules to recover spatial information lost in strided con-
+volutions [7], and specialized CNNs capable of simultaneously classifying species,
+sex, and physiological status [8]. Volume-centric methods, in contrast, attempt to
+compensate for data scarcity through synthetic image generation—typically via
+3D rendering, or through aggressive augmentation pipelines. A third, inference-
+centric line of work, exemplified by SAHI [9], intervenes neither on the training
+data nor on the architecture, but on the inference pipeline itself, slicing high-
+resolution images into overlapping patches to preserve small-object features that
+would otherwise be lost during standard convolution. None of these three ap-
+proaches, however, addresses the root cause of the problem: the procedure in
+which training images are acquired. This gap motivates the central questions
+driving our work:
+RQ1:To what extent does dataset quality and physical capture stan-
+dardization outperform increased model complexity in microscale insect
+detection?
+RQ2:Which component of a data-centric pipeline (ontological refine-
+ment, physical capture standardization, or iterative curation) yields the
+greatest individual performance gain?
+RQ3:Can a low-complexity model, trained on a rigorously curated
+dataset, achieve industrially acceptable detection performance without
+architectural modification?
+Our results establish the following contributions:
+–A reproducible, three-component data-centric pipeline for microscale object
+detection in industrial environments.
+–The Sticky Trap Insect Dataset (STID) dataset family, four progressively
+curated versions providing controlled ablation of each pipeline stage.
+–Empirical evidence that data engineering alone improves mAP@0.5 from
+0.476 to 0.608 on a fixed YOLO baseline (YOLO26-S) [10], demonstrating
+that capture standardization supersedes architectural complexity in this do-
+main.
+Data-Centric Pipeline for Microscale Insect Detection 3
+2 Related Work
+The dominant line of research in pest detection attributes performance limita-
+tions to architectural deficiencies and responds by proposing increasingly sophis-
+ticated neural networks. The YOLO family remains the most widely adopted
+backbone for real-time detection tasks, and several domain-specific variants
+have been developed. YOLO-DCPG [6] introduces a lightweight modification of
+YOLOv8n aimed at embedded deployment, reducing parameter count by over
+50% while improving precision on pest imagery. YOLO-YSTs [7] combines the
+NMS-free training strategy of YOLOv10 with SPD-Conv modules to mitigate
+information loss in strided convolutions, a critical issue for millimeter-level tar-
+gets. VectorBrain [8] extends the task further, concurrently predicting species
+identity, sex, and abdomen status from a single forward pass.
+While these contributions are technically significant, they share a common
+assumption: that the training data is of sufficient quality and consistency to
+allow the model to learn. A second body of work attributes performance limi-
+tations to data scarcity and attempts to address it through volume expansion.
+Synthetic image generation—typically via 3D rendering engines [11], allows the
+creation of large annotated datasets without manual collection. Augmentation
+pipelines further multiply existing samples through geometric and photometric
+transformations [12].
+A growing body of work challenges the model-centric consensus by arguing
+that, for many tasks, dataset quality is the primary determinant of performance.
+Ng [11] formalizes this position under theData-Centric AIparadigm, demon-
+strating that systematic dataset improvement yields larger performance gains
+than architectural iteration. In the SOD literature, SAHI [9] proposes a data-
+pipeline intervention at inference time, slicing images into overlapping patches
+to preserve spatial features typically lost in standard convolutions. Research
+on edge computing for vision-based insect traps [13] further indicates that un-
+standardized datasets are a primary cause of poor field performance, and that
+physical controls on image acquisition can significantly improve model reliability.
+As Table 1 demonstrates, no existing work applies a complete data-centric
+pipeline to microscale industrial pest detection. While current literature pre-
+dominantly relies on a model-centric paradigm, our work uniquely integrates a
+physical Standard Operating Procedure (SOP) to prevent specimen occlusion
+and targeted Noise Mitigation to resolve background clutter. Most importantly,
+we validate this pipeline through rigorous data ablation, isolating the impact
+of data maturation on a fixed architecture to prove that dataset structural in-
+tegrity—not algorithmic complexity, is the true bottleneck in this domain.
+3 Methodology
+3.1 Experimental Setup
+All experiments were conducted using the YOLO26 detection framework [10] in
+its S, M, L, and X size variants. Relative to prior Ultralytics releases, YOLO26
+4 M. P. C. M. Queiroz et al.
+Table 1.Comparison of related work by methodological focus.
+Work Core Paradigm Physical SOP Noise Mitigation Data Ablation
+YOLO-DCPG [6] Model-centric× × ×
+YOLO-YSTs [7] Model-centric× × ×
+VectorBrain [8] Model-centric× × ×
+SAHI [9] Inference× × ×
+Silva et al. [13] Data-centric Partial× ×
+Ours (STID) Data-centric✓ ✓ ✓
+adopts a natively end-to-end, NMS-free detection head, removes Distribution Fo-
+cal Loss in favor of direct coordinate regression, and is trained with the MuSGD
+optimizer alongside a Small-Target-Aware Label assignment strategy aimed at
+improving small-object recall, making it a relevant and representative architec-
+ture for this study. The complete set of hyperparameters and hardware spec-
+ifications is detailed in Table 2. The input resolution was fixed at native Full
+HD (1920×1080pixels) to preserve the millimetric morphological details of the
+insect targets, which required a batch size of 1 to avoid out-of-memory errors on
+the larger variants. The dataset was partitioned into training, validation, and
+test sets following an 80%/10%/10% split, applied consistently across all STID
+versions to prevent data leakage.
+Table 2.Training hyperparameters and experimental environment.
+Parameter / Component Value / Specification
+Epochs 200
+Batch Size 1
+Input Resolution1920×1080pixels
+Optimizer SGD
+Initial Learning Rate (lr0) 0.01
+Data Split (Train/Val/Test) 80% / 10% / 10%
+Compute Node NVIDIA DGX V100 System
+CPU Intel Xeon
+Framework PyTorch
+3.2 Dataset Curation and Baseline (STID-Clean)
+The initial phase of the pipeline utilized STID-Clean, consisting of 500 origi-
+nal captures of adhesive traps collected under uncontrolled field conditions. This
+baselineallowedforthesystematicidentificationofreal-worldchallengesinherent
+to microscale object detection, includingfeature vanishingduring network down-
+sampling, severe background clutter caused by industrial residues, and abrupt
+Data-Centric Pipeline for Microscale Insect Detection 5
+scale variations arising from inconsistent camera distances. STID-Clean was an-
+notated with five biological classes, namely Fruit Fly (FF), House Fly (HF),
+Blow Fly (BF), Flesh Fly (MF), and a generic Other Insects (OI) class covering
+specimens that did not fall into the four named taxa, and served as the reference
+point against which all subsequent curation stages were evaluated. All images
+were captured at a fixed resolution of1,920×1,080pixels and annotated using
+Roboflow, with tight axis-aligned bounding boxes drawn to the morphological
+limits of each specimen. From STID-Onto onward, a sixth, non-biological class,
+Noise, was added to explicitly annotate industrial debris (adhesive dirt, fibres,
+and particulate matter) that visually resembles the biological targets, as detailed
+in Section 3.4.
+3.3 Volume Expansion via Synthetic Data (STID-Raw)
+To address data scarcity, a second dataset version, STID-Raw, was produced by
+augmenting the original captures with synthetic images generated in Blender.
+The 3D modeling pipeline randomized the spatial distribution and angular rota-
+tion of virtual insect models, positioning each specimen at the exact focal depth
+of the adhesive layer to maximise photorealism. This process yielded over 2,700
+training samples. Despite the increased volume, the approach was ultimately
+discarded: artificial lighting conditions and the absence of organic adhesive tex-
+tures prevented the model from generalizing to real trap images, confirming that
+volume alone is insufficient when domain fidelity is low.
+3.4 Ontological Refinement (STID-Onto)
+Retracting from the synthetic approach, the third iteration refocused on annota-
+tionquality.STID-Ontointroducedaformalontologicalrefinementbyexpanding
+the label set from five to six classes through the addition of an auxiliaryNoise
+class. This class was specifically designed to encode the visual appearance of
+industrial debris, adhesive dirt, fibres, and particulate matter, that consistently
+triggered false positive detections when morphologically similar to the Fruit Fly.
+By explicitly forcing the network to learn whatnotto detect, this intervention
+significantly reduced the false positive rate in real operating conditions. Data
+augmentation was applied exclusively to the organic captures at this stage to
+further improve sample diversity without reintroducing the domain gap observed
+in STID-Raw.
+3.5 Physical Capture Standardisation (STID-SOP)
+The final and most impactful stage of the pipeline addressed the physical bottle-
+necks identified in STID-Clean: inconsistent focal distance, variable lighting, and
+specimen occlusion due to natural crowding on the adhesive surface. A rigorous
+SOPwasestablished,fixingthecamerafocallengthandenforcinguniformillumi-
+nation across all acquisitions, thereby guaranteeing a constant spatial resolution
+6 M. P. C. M. Queiroz et al.
+at the millimetre scale. In parallel, structured physical templates, printed grids
+placed directly on the adhesive plates—imposed a homogeneous spatial distribu-
+tion of specimens, effectively eliminating occlusion and enabling bounding-box
+annotations to be adjusted strictly to the morphological limits of each individual.
+We refer to the cumulative set of real, non-synthetic captures accumulated
+across the STID-Clean and STID-Onto stages as theorganic dataset, as op-
+posed to the Blender-generated synthetic images introduced in STID-Raw (Sec-
+tion 3.3). STID-SOP is composed exclusively of images captured under these
+standardized 2026-protocol plates. Subsequent internal versions within the 5th
+iteration series combine these standardized captures with selected legacy im-
+ages from the organic dataset, applying class balancing to mitigate the natural
+imbalance between abundant and rare species.
+3.6 Dataset Summary
+Table 3 summarizes the four STID versions, their core engineering strategy, and
+approximate sample counts. Together, they form a controlled ablation of the
+proposed pipeline.
+Table 3.Evolution of dataset versions and engineering strategies.
+Version Approx. Samples Key Engineering Strategy
+STID-Clean∼500 Organic baseline; 5 biological classes;
+uncontrolled capture conditions.
+STID-Raw>2,700 Volume expansion via Blender 3D syn-
+thetic images; randomised specimen
+placement and rotation.
+STID-Onto∼500 Ontological refinement; 6 classes;Noise
+class introduced to suppress false posi-
+tives from industrial debris.
+STID-SOP∼900 Physical SOP: fixed focal length, uni-
+form lighting, printed grid templates to
+eliminate specimen occlusion.
+To validate the three research questions, we trained YOLO26 in four size
+variants (S, M, L, and X) on each of the four STID dataset versions, yielding a
+factorial grid of4×4 = 16experimental conditions. Performance was measured
+byMeanAveragePrecisionatIntersectionoverUnion(IoU)0.5(mAP@0.5),Pre-
+cision, and Recall. Holding the architecture and training configuration constant
+across all runs ensures that any observed variation is attributable exclusively to
+changes in the underlying data, providing the controlled ablation necessary to
+answer each research question. The STID dataset was collected under a com-
+mercial partnership and contains proprietary industrial data; consequently, it is
+not publicly released, though anonymized samples may be made available upon
+reasonable request for academic verification purposes.
+Data-Centric Pipeline for Microscale Insect Detection 7
+4 Experiments
+Due to computational constraints imposed by the fixed Full HD resolution and
+unitary batch size, each configuration was trained with a single run rather than
+averaged across multiple random seeds; we report point estimates and note this
+as a limitation to be addressed in future replications of this study.
+Table 4.Detection performance (mAP@0.5 / Precision / Recall) across dataset ver-
+sions and model scales.
+Dataset YOLO26-S YOLO26-M YOLO26-L YOLO26-X
+mAP P R mAP P R mAP P R mAP P R
+STID-Clean 0.476 0.423 0.625 0.452 0.368 0.545 0.482 0.430 0.592 0.481 0.449 0.589
+STID-Raw 0.679 0.676 0.652 0.675 0.665 0.632 0.677 0.643 0.644 0.645 0.628 0.641
+STID-Onto 0.381 0.574 0.504 0.415 0.404 0.554 0.402 0.375 0.595 0.409 0.415 0.560
+STID-SOP 0.608 0.527 0.652 0.492 0.592 0.522 0.547 0.461 0.583 0.534 0.455 0.549
+4.1 RQ1 — Data Quality versus Model Complexity
+Reading Table 4horizontally(across model scales within a fixed dataset) reveals
+that scaling from YOLO26-S to YOLO26-X yields negligible and inconsistent im-
+provements. On STID-Clean, mAP@0.5 ranges from 0.476 to 0.481, an absolute
+spread of only 0.005 points despite a substantial increase in parameter count.
+The same plateau appears on STID-Onto (0.381–0.409) and STID-SOP (0.608–
+0.534). Across every dataset version, the gain from multiplying model capacity
+is marginal and does not follow a consistent upward trend.
+Reading the tablevertically(across dataset versions within a fixed model)
+reveals the opposite dynamic. Even the smallest variant, YOLO26-S, improved
+its mAP@0.5 from 0.476 on STID-Clean to 0.608 on STID-SOP, an absolute
+gain of +0.132. This pattern is consistent across all four model sizes, suggesting
+that the performance bottleneck resides in the data rather than in the network
+architecture.
+The explanation lies in the physical nature of the task. When training im-
+agescontainoccludedorscale-inconsistentspecimens,themorphologicalfeatures
+required for detection are absent or corrupted at the pixel level. No increase
+in model capacity can reconstruct information that was never captured at im-
+age acquisition. Once physical controls were applied in STID-SOP, the smallest
+YOLO26-S architecture learned to detect the same targets that larger models
+consistently failed on, confirming that architectural complexity cannot compen-
+sate for spatially deficient input.
+8 M. P. C. M. Queiroz et al.
+4.2 RQ2 — Contribution of Each Pipeline Component
+The vertical trajectory of Table 4 reveals three qualitatively distinct phases of
+dataset evolution, each corresponding to a specific pipeline intervention.
+Phase 1: Volume expansion (STID-Raw).The STID-Raw dataset was
+constructed by merging the original 500 real captures with more than 2 ,700
+syntheticimagesgeneratedbyBlender3Dmodeling,followingthevolume-centric
+hypothesis that more training data would benefit the model. The validation
+metrics for STID-Raw, to be fully reported upon completion of current training
+runs, are expected to confirm an apparent improvement over STID-Clean on the
+held-out validation split.
+However, this apparent gain is accompanied by a qualitative failure mode ob-
+served during visual inspection of predictions on genuine adhesive plates outside
+the training distribution: models trained on STID-Raw exhibited a higher rate of
+false negatives on real specimens and false positives on adhesive residue, consis-
+tent with a domain gap between the synthetic and organic image distributions.
+Synthetic images, despite correct geometric placement, lack the organic surface
+textures of real insect bodies and the characteristic appearance of adhesive sub-
+strates under authentic illumination conditions. A quantitative evaluation on
+held-out real-world deployment data is left for future work.
+This phenomenon illustrates a fundamental limitation of volume-centric ap-
+proaches: validation-set performance computed on in-distribution data (where
+synthetic and real are mixed) can be a misleading proxy for real-world relia-
+bility when the training distribution diverges from the deployment distribution.
+Notably, STID-SOP relies exclusively on real captures under standardized con-
+ditions, which by construction avoids this synthetic-to-real domain gap.
+This finding demonstrates that, for microscale biological targets with distinc-
+tive organic textures, synthetic data augmentation not only fails to generalize
+but actively misleads evaluation, creating a false impression of progress that
+disappears under real operational conditions.
+Phase 2: Ontological refinement (STID-Onto).Recognizing that tex-
+ture fidelity alone was insufficient, STID-Onto introduced an ontological inter-
+vention: the addition of an auxiliaryNoiseclass comprising annotated industrial
+debris and adhesive residue that visually mimics millimeter-sized insects. This
+forced the network to explicitly learn whatnotto detect, providing direct su-
+pervision over the primary source of false positives. The resulting mAP@0.5 for
+YOLO26-S reached 0.381, lower in absolute terms than STID-Clean, but accom-
+panied by substantially higher Precision (0.574 versus 0.423), indicating that the
+model began making fewer false biological detections.
+Phase 3: Physical capture standardization (STID-SOP).The decisive
+intervention was the implementation of a Standard Operating Procedure (SOP)
+thatfixedfocallengthandstandardizedillumination,combinedwithprintedgrid
+templates on the adhesive plates to enforce specimen separation. This addressed
+the two physical bottlenecks that ontological refinement alone could not solve:
+inter-image scale variance and bounding-box overlap from specimen crowding.
+The transition from STID-Onto to STID-SOP produced the largest single gain
+Data-Centric Pipeline for Microscale Insect Detection 9
+across all model scales, with YOLO26-S reaching a peak mAP@0.5 of 0.608, an
+absolute improvement of +0.227 over STID-Onto. Crucially, unlike STID-Raw,
+these metrics reflect real, standardized captures rather than a mix including
+synthetic imagery, confirming that physical standardization produces a training
+distribution that genuinely matches the deployment environment.
+4.3 RQ3 — Industrial Viability of a Standard Model
+The third research question asks whether an architecturally unmodified model,
+trained on a rigorously curated dataset, can achieve detection performance com-
+parable to that reported by specialized architectures in the literature.
+Theresultsconfirmthishypothesis.YOLO26-StrainedonSTID-SOPachieved
+a global mAP@0.5 of 0.608, with Precision of 0.527 and Recall of 0.652. These
+figures are directly comparable to those reported by architecturally customized
+models such as YOLO-DCPG [6] and YOLO-YSTs [7], which operate on less
+challenging, better-controlled datasets and rely on structural modifications to
+achieve their gains. Our baseline model, without any such modifications, reaches
+equivalent performance through data quality alone. Notably, on our own dataset
+this relationship inverts once the data-centric pipeline is applied: on STID-Clean,
+YOLO26-L holds a marginal edge over YOLO26-S (0.482 versus 0.476), whereas
+on STID-SOP YOLO26-S (0.608) clearly outperforms YOLO26-L (0.547). This
+reversal is direct evidence that dataset quality, not model capacity, is the domi-
+nant factor governing detection performance in this task.
+Furthermore, considering the benchmark established by manual inspection
+(the Technique for Human Error Rate Prediction, THERP, estimates human
+error rates of up to 30% in repetitive visual tasks [4]), a Recall of 0.652 on an
+unconstrained microscale dataset represents a performance level that is indus-
+trially competitive. As physical standardisation is progressively extended to the
+full operational environment, these metrics are expected to improve further.
+The residual classification errors provide additional evidence that the remain-
+inglimitationsarephysicalratherthanalgorithmic.TheconfusionbetweenFlesh
+Fly (MF) and Blow Fly (BF) reflects genuine morphological similarity that chal-
+lenges even trained human taxonomists. The misclassification between Fruit Fly
+(FF) and theNoiseclass occurs because sub-millimeter debris is physically in-
+distinguishable from the insect’s body under standard imaging conditions. These
+are not model failures; they are the irreducible boundaries of the detection task
+itself.
+5 Conclusion
+This work demonstrates that, for the task of microscale object detection in in-
+dustrial pest control, the structural integrity of the training dataset is the pri-
+mary determinant of model performance, fundamentally superseding architec-
+tural complexity. Through a controlled ablation across four progressively curated
+versions of the STID dataset and four YOLO26 model scales, we showed that
+10 M. P. C. M. Queiroz et al.
+scaling model capacity within a fixed dataset yields negligible gains, whereas sys-
+tematic data engineering, comprising ontological refinement through the intro-
+duction of aNoiseclass and physical capture standardisation via a printed-grid
+SOP and fixed focal distance, produced the decisive performance gains observed.
+Theresidualclassificationerrorsinthefinalmodel,suchastheconfusionbetween
+morphologically similar species, reflect the taxonomic boundaries of the target
+species rather than algorithmic deficiencies, suggesting that scaling the pipeline
+to a larger number of visually similar species will likely require finer-grained mor-
+phological features rather than dataset volume alone. Dense crowding scenarios
+beyond what the printed-grid SOP resolves may also benefit from instance seg-
+mentation, though this was not explored here given its added annotation cost.
+Future work will focus on deploying the model to edge devices for real-time field
+monitoring, validating the pipeline across multiple random seeds, and investigat-
+ing self-supervised learning techniques to reduce the manual annotation effort
+required for emerging pest species.
+Acknowledgments.This study was carried out within the scope of the AKCIT -
+Embrapii Center of Competence in Immersive Technologies Applied to Virtual Worlds,
+hosted at the Center of Excellence in Artificial Intelligence of the Federal University
+of Goiás (CEIA-UFG), with financial support from the Brazilian Ministry of Science,
+Technology and Innovation (MCTI) through Embrapii.
+References
+1. International Organization for Standardization,ISO 22000:2018 – Food safety
+management systems – Requirements for any organization in the food chain, Inter-
+national Organization for Standardization Std., 2018.
+2. Codex Alimentarius, “General principles of food hygiene (CXC 1-1969),”
+FAO/WHO, 2020, revised.
+3. M. Preti, F. Verheggen, and S. Angeli, “Insect pest monitoring with camera-
+equipped traps: strengths and limitations,”Journal of Pest Science, vol. 94, no. 2,
+pp. 203–217, 2021.
+4. A. D. Swain and H. E. Guttmann, “Handbook of human reliability analysis with
+emphasis on nuclear power plant applications,” U.S. Nuclear Regulatory Commis-
+sion, Tech. Rep. NUREG/CR-1278, 1983.
+5. A. B. Lakyiere, R.-M. O. Gyening Mensah, N. Y. Agbenor-Efunam, E. Yamba,
+and K. Badu, “Trends and advances in image-based mosquito identification and
+classification using machine learning models: A systematic review,”Computers in
+Biology and Medicine, vol. 193, p. 110373, 2025.
+6. J. Liu, E. Yu, Y. Li, Y. Zhao, and B. Mao, “YOLO-DCPG: A lightweight archi-
+tecture with dual-channel pooling gated attention for intensive small-target agri-
+cultural pest detection,”Frontiers in Plant Science, vol. 16, p. 1716703, 2025.
+7. Y. Huang, Z. Liu, H. Zhao, C. Tang, B. Liu, Z. Li, F. Wan, W. Qian, and X. Qiao,
+“YOLO-YSTs: An improved YOLOv10n-based method for real-time field pest de-
+tection,”Agronomy, vol. 15, no. 3, p. 575, 2025.
+8. D. Li, S. Hegde, A. Sunil Kumar, A. Zacharias, P. Mehta, V. Mukthineni, S. Sri-
+math, S. Patel, M. Suin, R. Chellappa, and S. Acharya, “Towards transforming
+Data-Centric Pipeline for Microscale Insect Detection 11
+malaria vector surveillance using VectorBrain: A novel convolutional neural net-
+work for mosquito species, sex, and abdomen status identifications,”Scientific Re-
+ports, vol. 14, no. 1, p. 23647, 2024.
+9. F. C. Akyon, S. O. Altinuc, and A. Temizel, “Slicing aided hyper inference and
+fine-tuning for small object detection,” in2022 IEEE International Conference on
+Image Processing (ICIP), 2022, pp. 966–970.
+10. G. Jocher and J. Qiu, “Ultralytics yolo26,”
+https://docs.ultralytics.com/models/yolo26/, 2026, ultralytics.
+11. A. Ng, L. Aroyo, C. Coleman, G. Diamos, V. Janapa Reddi, J. Van-
+schoren, C.-J. Wu, and S. Zhou, “NeurIPS data-centric AI workshop,”
+https://datacentricai.org/neurips21/, 2021.
+12. M. Nikouei, B. Baroutian, S. Nabavi, F. Taraghi, A. Aghaei, A. Sajedi, and
+M. Ebrahimi Moghaddam, “Small object detection: A comprehensive survey on
+challenges, techniques and real-world applications,”Intelligent Systems with Ap-
+plications, vol. 27, p. 200561, 2025.
+13. I. Saradopoulos, I. Potamitis, S. Ntalampiras, A. I. Konstantaras, and E. N. An-
+tonidakis, “Edge computing for vision-based, urban-insects traps in the context of
+smart cities,”Sensors, vol. 22, no. 5, p. 2006, 2022.
