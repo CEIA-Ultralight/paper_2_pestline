@@ -1,0 +1,105 @@
+Bootstrap: docker
+From: nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04
+
+# =============================================================================
+# flydet-train-b200.def — container de treino/avaliacao para a particao b200n1
+# (NVIDIA B200, sm_100). Derivado de flydet-train.def (cu124/torch 2.6), com:
+#   - torch 2.8.0 + torchvision 0.23.0 (cu128; sm_100 suportado a partir do cu128)
+#   - ultralytics==8.4.142 PINADO (versao contra a qual rq3_tiny_object/patches/*
+#     verificam assinaturas; fail-fast se mudar)
+#   - albumentations, wandb, pandas
+#   - fly_det copiado do submodule baseline/fly-det (contexto de build)
+#
+# Build (slurm-runner, no login node NAO precisa de GPU; usa fakeroot/--remote se preciso):
+#   cd /raid/user_marcospaulo/paper_2_pestline/baseline/fly-det
+#   APPTAINER_CACHEDIR=/raid/user_marcospaulo/cache/apptainer \
+#   APPTAINER_TMPDIR=/raid/user_marcospaulo/cache/apptainer/tmp \
+#   apptainer build --fakeroot /raid/user_marcospaulo/containers/flydet-train-b200.sif \
+#       ../../common/containers/flydet-train-b200.def
+#   (o %files abaixo e RELATIVO ao cwd = baseline/fly-det)
+#
+# Compatibilidade verificada (2026, venv CPU local): ultralytics 8.4.142 declara
+# torch>=1.8.0 e torchvision>=0.9.0 sem limite superior -> torch 2.8.0/cu128 OK.
+# fly-det (pyproject) exige torch>=2.6.0, ultralytics>=8.3.228 -> OK. Se o resolvedor
+# reclamar de IMUtils (dependencia git), o build precisa de rede para o GitHub.
+# =============================================================================
+
+%arguments
+    TORCH_INDEX_URL=https://download.pytorch.org/whl/cu128
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+    export TZ=America/Sao_Paulo
+    export PYTHONUNBUFFERED=1
+    export PATH="/opt/venv/bin:$PATH"
+    # Caches no /raid (regra do cluster: nada de cache na home)
+    export WANDB_DIR="${WANDB_DIR:-/raid/user_marcospaulo/wandb}"
+    export HF_HOME="${HF_HOME:-/raid/user_marcospaulo/.cache/huggingface}"
+    export TORCH_HOME="${TORCH_HOME:-/raid/user_marcospaulo/.cache/torch}"
+    export PIP_CACHE_DIR="${PIP_CACHE_DIR:-/raid/user_marcospaulo/.cache/pip}"
+    export YOLO_CONFIG_DIR="${YOLO_CONFIG_DIR:-/raid/user_marcospaulo/.config/Ultralytics}"
+
+%post
+    set -e
+    export DEBIAN_FRONTEND=noninteractive
+    TZ=America/Sao_Paulo
+
+    apt-get update && apt-get install -y --no-install-recommends \
+        python3 python3-pip python3-venv python3-dev \
+        git ffmpeg tzdata ca-certificates \
+        libgl1 libglib2.0-0 curl \
+     && ln -sf /usr/share/zoneinfo/$TZ /etc/localtime \
+     && echo $TZ > /etc/timezone \
+     && rm -rf /var/lib/apt/lists/*
+
+    python3 -m venv /opt/venv
+    export PATH="/opt/venv/bin:$PATH"
+
+    curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh
+
+    # Constraints: torch cu128 (B200/sm_100) + ultralytics pinado
+    printf '%s\n' \
+      'torch==2.8.0' \
+      'torchvision==0.23.0' \
+      'ultralytics==8.4.142' \
+      > /tmp/constraints.txt
+
+    uv pip install --no-cache -c /tmp/constraints.txt \
+      torch==2.8.0 torchvision==0.23.0 \
+      --index-url {{ TORCH_INDEX_URL }}
+
+    # fly-det (pacote do baseline); o pyproject NAO define extra [wandb] — wandb vai abaixo.
+    uv pip install --no-cache -c /tmp/constraints.txt "/opt/src/fly-det"
+
+    # Pinos explicitos do paper 2
+    uv pip install --no-cache -c /tmp/constraints.txt \
+      "ultralytics==8.4.142" "albumentations>=2.0.3" wandb pandas pyyaml
+
+    # Verificacao de build (CPU): versoes e patch NWD importavel contra 8.4.142
+    /opt/venv/bin/python - <<'CHECK'
+import torch, torchvision, ultralytics, albumentations, wandb, pandas
+assert ultralytics.__version__ == "8.4.142", ultralytics.__version__
+assert torch.__version__.startswith("2.8.0"), torch.__version__
+print("torch", torch.__version__, "cuda", torch.version.cuda, "| torchvision", torchvision.__version__,
+      "| ultralytics", ultralytics.__version__, "| albumentations", albumentations.__version__,
+      "| wandb", wandb.__version__, "| pandas", pandas.__version__)
+import fly_det.trainer  # noqa: F401
+print("fly_det OK")
+CHECK
+
+    mkdir -p /workspace/models /workspace/runs /data
+
+%files
+    # contexto de build = baseline/fly-det (raiz do pacote fly_det)
+    fly_det /opt/src/fly-det/fly_det
+    pyproject.toml /opt/src/fly-det/pyproject.toml
+    README.md /opt/src/fly-det/README.md
+
+%runscript
+    export PATH="/opt/venv/bin:$PATH"
+    exec fly-det-train "$@"
+
+%labels
+    Author paper_2_pestline
+    Project pestline
+    Description "Treino fly-det/YOLO26 para B200 (sm_100): CUDA 12.8, torch 2.8.0, ultralytics 8.4.142"
