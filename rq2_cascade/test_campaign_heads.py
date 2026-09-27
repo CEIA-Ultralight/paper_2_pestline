@@ -337,11 +337,16 @@ def discover_heads(runs_root=RUNS_ROOT, repo_root=REPO_ROOT, campaign_roots=None
     return specs
 
 
+GPU_PARTITIONS = tuple(
+    p.strip() for p in os.environ.get('FLYDET_GPU_PARTITIONS', 'h100n2,b200n1').split(',') if p.strip()
+)
+
+
 def _guard():
     if not os.environ.get('SLURM_JOB_ID'):
         raise RuntimeError('Head inference requires SLURM_JOB_ID; never run on login nodes')
-    if os.environ.get('SLURM_JOB_PARTITION') != 'h100n2':
-        raise RuntimeError('Head inference requires SLURM_JOB_PARTITION=h100n2')
+    if os.environ.get('SLURM_JOB_PARTITION') not in GPU_PARTITIONS:
+        raise RuntimeError(f'Head inference requires SLURM_JOB_PARTITION in {GPU_PARTITIONS}')
     if not (os.environ.get('APPTAINER_CONTAINER') or os.environ.get('APPTAINER_NAME')):
         raise RuntimeError('Head inference requires Apptainer')
 

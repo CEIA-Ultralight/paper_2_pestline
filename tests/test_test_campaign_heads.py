@@ -17,7 +17,7 @@ import unittest
 from unittest import mock
 
 
-MODULE_PATH = Path(__file__).resolve().parents[1] / 'scripts/test_campaign_heads.py'
+MODULE_PATH = Path(__file__).resolve().parents[1] / 'rq2_cascade/test_campaign_heads.py'
 IMPORT_SPEC = importlib.util.spec_from_file_location('campaign_heads_under_test', MODULE_PATH)
 heads = importlib.util.module_from_spec(IMPORT_SPEC)
 IMPORT_SPEC.loader.exec_module(heads)
@@ -280,6 +280,8 @@ class PureContractTests(unittest.TestCase):
 
 
 @unittest.skipUnless(heads.RUNS_ROOT.is_dir(), 'Real RAID campaign is not mounted')
+@unittest.skipUnless((heads.RUNS_ROOT / 'E3_swin').exists(),
+                     'checkpoints reais do fly-det (flydet_runs/) ausentes nesta maquina')
 class RealDiscoveryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

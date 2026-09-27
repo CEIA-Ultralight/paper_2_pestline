@@ -83,8 +83,14 @@ WARNINGS = [
 
 
 def sibling(name):
-    """Load trusted local stdlib-only helpers without creating __pycache__."""
-    path = Path(__file__).resolve().with_name(name + '.py')
+    """Load trusted local stdlib-only helpers without creating __pycache__.
+
+    Layout do paper_2_pestline: eval_yolo_cascade.py vive em rq2_cascade/, não ao lado deste
+    arquivo; procuramos primeiro no mesmo diretório e depois em ../rq2_cascade.
+    """
+    here = Path(__file__).resolve().parent
+    candidates = [here / (name + '.py'), here.parent / 'rq2_cascade' / (name + '.py')]
+    path = next((p for p in candidates if p.exists()), candidates[0])
     module = types.ModuleType('_campaign_' + name)
     module.__file__ = str(path)
     exec(compile(path.read_bytes(), str(path), 'exec'), module.__dict__)

@@ -103,9 +103,15 @@ def raid_path(value):
     return path
 
 
+GPU_PARTITIONS = tuple(
+    p.strip() for p in os.environ.get('FLYDET_GPU_PARTITIONS', 'h100n2,b200n1').split(',') if p.strip()
+)
+
+
 def allocation_guard():
     require(bool(os.environ.get('SLURM_JOB_ID')), 'SLURM_JOB_ID required; no login-node execution')
-    require(os.environ.get('SLURM_JOB_PARTITION') == 'h100n2', 'Requires partition h100n2')
+    require(os.environ.get('SLURM_JOB_PARTITION') in GPU_PARTITIONS,
+            f'Requires a GPU partition in {GPU_PARTITIONS}')
     require(any(os.environ.get(k) for k in ('APPTAINER_CONTAINER', 'APPTAINER_NAME')),
             'Requires Apptainer, not a venv or CPU fallback')
     require(int(os.environ.get('WORLD_SIZE', '1')) == 1 and

@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
-SOURCE = Path(__file__).resolve().parents[1] / 'scripts/eval_yolo_cascade.py'
+SOURCE = Path(__file__).resolve().parents[1] / 'rq2_cascade/eval_yolo_cascade.py'
 SPEC = importlib.util.spec_from_file_location('eval_yolo_cascade', SOURCE)
 cascade = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(cascade)

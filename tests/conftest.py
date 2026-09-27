@@ -4,9 +4,24 @@ import importlib
 import sys
 import types
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
+
+# Layout deste repo (paper_2_pestline): os scripts nao estao em `scripts/` como no fly-det,
+# e sim espalhados por RQ. Tornamos todos importaveis como modulos de topo nos testes CPU.
+ROOT = Path(__file__).resolve().parents[1]
+for _rel in (
+    "baseline/fly-det",
+    "rq3_tiny_object",
+    "rq3_tiny_object/patches",
+    "rq2_cascade",
+    "common",
+):
+    _p = str(ROOT / _rel)
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 
 def _stub_module(name: str, functions: list[str]) -> types.ModuleType:

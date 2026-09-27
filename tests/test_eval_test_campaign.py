@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 
-SOURCE = Path(__file__).resolve().parents[1] / 'scripts/eval_test_campaign.py'
+SOURCE = Path(__file__).resolve().parents[1] / 'common/eval_test_campaign.py'
 spec = importlib.util.spec_from_file_location('eval_test_campaign_under_test', SOURCE)
 campaign = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(campaign)

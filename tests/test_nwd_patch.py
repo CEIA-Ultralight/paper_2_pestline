@@ -8,19 +8,15 @@ Rodam sem GPU e sem dataset. Validam:
 """
 
 import os
-import sys
 import unittest
-from pathlib import Path
 
 import torch
-
-SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
-sys.path.insert(0, str(SCRIPTS))
 
 os.environ.setdefault("FLYDET_NWD_W", "0.5")
 os.environ.setdefault("FLYDET_NWD_C", "44.0")
 
-from nwd_patch import apply_nwd_patch, is_patched, nwd_similarity  # noqa: E402
+# sys.path (rq3_tiny_object/patches) e configurado em tests/conftest.py
+from nwd_patch import apply_nwd_patch, is_patched, nwd_similarity
 
 
 class TestNWDSimilarity(unittest.TestCase):
@@ -100,6 +96,73 @@ class TestNWDPatch(unittest.TestCase):
         # caixa deslocada 2 px deve ter overlap alto; caixa longe, ~zero
         self.assertGreater(ov[0].item(), 0.8)
         self.assertLess(ov[1].item(), 0.01)
+
+
+class TestNWDScope(unittest.TestCase):
+    """FLYDET_NWD_SCOPE=loss|assigner|both escolhe quais metodos recebem o patch."""
+
+    def setUp(self):
+        import nwd_patch
+        from ultralytics.utils.loss import BboxLoss
+        from ultralytics.utils.tal import TaskAlignedAssigner
+
+        self.mod = nwd_patch
+        self.BboxLoss = BboxLoss
+        self.TAA = TaskAlignedAssigner
+        # estado a restaurar (outros testes dependem do patch "both")
+        self._saved = (BboxLoss.forward, TaskAlignedAssigner.iou_calculation, nwd_patch._PATCHED)
+        self._env = os.environ.get("FLYDET_NWD_SCOPE")
+
+    def tearDown(self):
+        self.BboxLoss.forward, self.TAA.iou_calculation, self.mod._PATCHED = self._saved
+        if self._env is None:
+            os.environ.pop("FLYDET_NWD_SCOPE", None)
+        else:
+            os.environ["FLYDET_NWD_SCOPE"] = self._env
+
+    def _reset(self, scope):
+        # sentinelas com a MESMA assinatura do ultralytics 8.4.142 (o patch faz fail-fast nela)
+        def sentinel_loss(self, pred_dist, pred_bboxes, anchor_points, target_bboxes,
+                          target_scores, target_scores_sum, fg_mask, imgsz, stride):
+            return "orig_loss"
+
+        def sentinel_iou(self, gt_bboxes, pd_bboxes):
+            return "orig_iou"
+
+        self.BboxLoss.forward = sentinel_loss
+        self.TAA.iou_calculation = sentinel_iou
+        self.mod._PATCHED = False
+        if scope is None:
+            os.environ.pop("FLYDET_NWD_SCOPE", None)
+        else:
+            os.environ["FLYDET_NWD_SCOPE"] = scope
+        return sentinel_loss, sentinel_iou
+
+    def test_default_scope_is_both(self):
+        self._reset(None)
+        cfg = self.mod.apply_nwd_patch()
+        self.assertEqual(cfg["nwd_scope"], "both")
+        self.assertIs(self.BboxLoss.forward, self.mod._patched_bbox_loss_forward)
+        self.assertIs(self.TAA.iou_calculation, self.mod._patched_iou_calculation)
+
+    def test_scope_loss_only(self):
+        _, orig_iou = self._reset("loss")
+        cfg = self.mod.apply_nwd_patch()
+        self.assertEqual(cfg["nwd_scope"], "loss")
+        self.assertIs(self.BboxLoss.forward, self.mod._patched_bbox_loss_forward)
+        self.assertIs(self.TAA.iou_calculation, orig_iou)
+
+    def test_scope_assigner_only(self):
+        orig_loss, _ = self._reset("assigner")
+        cfg = self.mod.apply_nwd_patch()
+        self.assertEqual(cfg["nwd_scope"], "assigner")
+        self.assertIs(self.BboxLoss.forward, orig_loss)
+        self.assertIs(self.TAA.iou_calculation, self.mod._patched_iou_calculation)
+
+    def test_invalid_scope_fails_fast(self):
+        self._reset("everything")
+        with self.assertRaises(RuntimeError):
+            self.mod.apply_nwd_patch()
 
 
 if __name__ == "__main__":

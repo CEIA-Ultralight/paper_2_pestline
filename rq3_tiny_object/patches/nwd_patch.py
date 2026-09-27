@@ -22,6 +22,9 @@ Configuracao por variaveis de ambiente (com defaults do E10):
   FLYDET_NWD_C    (default 44.0)  — constante de escala (px)
   FLYDET_NWD_MODE (default nwd)   — "nwd" (C fixo) ou "gcd" (escala local,
                                     invariante a escala; arXiv:2510.27649)
+  FLYDET_NWD_SCOPE (default both) — onde aplicar: "loss" (so BboxLoss.forward),
+                                    "assigner" (so TaskAlignedAssigner.iou_calculation)
+                                    ou "both" (E10). Ablacao E10-loss / E10-assigner.
 
 Compativel com ultralytics 8.4.142 (assinaturas verificadas no container
 flydet-train.sif em 2026-09-21). Se a assinatura mudar, apply_nwd_patch
@@ -33,17 +36,40 @@ import os
 
 import torch
 import torch.nn.functional as F
+from gcd_patch import gcd_similarity
 from ultralytics.utils.loss import BboxLoss
 from ultralytics.utils.metrics import bbox_iou
 from ultralytics.utils.tal import TaskAlignedAssigner, bbox2dist
 
-from gcd_patch import gcd_similarity
-
 NWD_W = float(os.environ.get("FLYDET_NWD_W", "0.5"))
 NWD_C = float(os.environ.get("FLYDET_NWD_C", "44.0"))
 NWD_MODE = os.environ.get("FLYDET_NWD_MODE", "nwd").strip().lower()
+VALID_MODES = ("nwd", "gcd", "off")
+VALID_SCOPES = ("loss", "assigner", "both")
 
 _PATCHED = False
+
+
+def resolve_mode() -> str:
+    """Le FLYDET_NWD_MODE no momento da aplicacao do patch e sincroniza o global NWD_MODE."""
+    global NWD_MODE
+    mode = os.environ.get("FLYDET_NWD_MODE", "nwd").strip().lower()
+    if mode not in VALID_MODES:
+        raise RuntimeError(
+            f"[nwd_patch] FLYDET_NWD_MODE invalido: {mode!r} (use {'|'.join(VALID_MODES)})"
+        )
+    NWD_MODE = mode
+    return mode
+
+
+def resolve_scope() -> str:
+    """Le FLYDET_NWD_SCOPE no momento da aplicacao do patch (default: both)."""
+    scope = os.environ.get("FLYDET_NWD_SCOPE", "both").strip().lower()
+    if scope not in VALID_SCOPES:
+        raise RuntimeError(
+            f"[nwd_patch] FLYDET_NWD_SCOPE invalido: {scope!r} (use {'|'.join(VALID_SCOPES)})"
+        )
+    return scope
 
 
 def nwd_similarity(boxes1: torch.Tensor, boxes2: torch.Tensor, constant: float) -> torch.Tensor:
@@ -137,10 +163,12 @@ def apply_nwd_patch() -> dict:
     Retorna dict com a config efetiva (para logging/rastreabilidade).
     """
     global _PATCHED
-    cfg = {"nwd": True, "nwd_w": NWD_W, "nwd_c": NWD_C, "nwd_mode": NWD_MODE}
-    if NWD_MODE == "off":  # E0 puro / multi-seed do baseline: sem patch
+    mode = resolve_mode()
+    if mode == "off":  # E0 puro / multi-seed do baseline: sem patch
         print("[nwd_patch] FLYDET_NWD_MODE=off — treino SEM patch (baseline)")
         return {"nwd": False, "nwd_mode": "off"}
+    scope = resolve_scope()
+    cfg = {"nwd": True, "nwd_w": NWD_W, "nwd_c": NWD_C, "nwd_mode": mode, "nwd_scope": scope}
     if _PATCHED:
         return cfg
 
@@ -157,11 +185,16 @@ def apply_nwd_patch() -> dict:
         "TaskAlignedAssigner.iou_calculation",
     )
 
-    BboxLoss.forward = _patched_bbox_loss_forward
-    TaskAlignedAssigner.iou_calculation = _patched_iou_calculation
+    applied = []
+    if scope in ("loss", "both"):
+        BboxLoss.forward = _patched_bbox_loss_forward
+        applied.append("BboxLoss.forward")
+    if scope in ("assigner", "both"):
+        TaskAlignedAssigner.iou_calculation = _patched_iou_calculation
+        applied.append("TaskAlignedAssigner.iou_calculation")
     _PATCHED = True
-    print(f"[nwd_patch] modo={NWD_MODE} w={NWD_W} C={NWD_C}px "
-          f"(BboxLoss.forward + TaskAlignedAssigner.iou_calculation)")
+    print(f"[nwd_patch] modo={mode} scope={scope} w={NWD_W} C={NWD_C}px "
+          f"({' + '.join(applied)})")
     return cfg
 
 

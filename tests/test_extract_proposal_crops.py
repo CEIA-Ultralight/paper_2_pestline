@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 sys.dont_write_bytecode = True
-SOURCE = Path(__file__).resolve().parents[1] / 'scripts/extract_proposal_crops.py'
+SOURCE = Path(__file__).resolve().parents[1] / 'rq2_cascade/extract_proposal_crops.py'
 SPEC = importlib.util.spec_from_file_location('extract_proposal_crops', SOURCE)
 prop = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(prop)
