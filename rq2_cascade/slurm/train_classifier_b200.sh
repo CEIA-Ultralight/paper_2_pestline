@@ -25,11 +25,14 @@
 #SBATCH --mem=96G
 #SBATCH --time=03:00:00
 #SBATCH --signal=B:SIGUSR1@300
+#SBATCH --requeue
+#SBATCH --open-mode=append
 #SBATCH --output=/raid/user_marcospaulo/slurm_logs/%x_%j.out
 
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${HERE}/../../common/slurm/b200_common.sh"
+# sbatch copia o script para /var/spool/slurmd/<job>/ -> nao usar dirname(BASH_SOURCE)
+REPO="${REPO:-/raid/user_marcospaulo/paper_2_pestline}"
+source "${REPO}/common/slurm/b200_common.sh"
 b200_guard
 
 VARIANT="${VARIANT:?Defina VARIANT (baseline|parts)}"
@@ -69,13 +72,16 @@ for split in train val; do
 done
 mkdir -p "${OUT}"
 
+# architecture_lab grava status completed|early_stop|budget|interrupted|failed (nunca "succeeded");
+# concluido = exit_code 0 + export_complete (best.pt exportado apos avaliacao no VAL).
 if [[ -f "${OUT}/summary.json" ]] && b200_apptainer /opt/venv/bin/python - "${OUT}/summary.json" <<'PY'
 import json, sys
 s = json.load(open(sys.argv[1]))
-sys.exit(0 if s.get("status") == "succeeded" and s.get("export_complete") else 1)
+print(f"[summary] status={s.get('status')} exit_code={s.get('exit_code')} export_complete={s.get('export_complete')} epochs_ran={s.get('epochs_ran')}")
+sys.exit(0 if s.get("exit_code") == 0 and s.get("export_complete") else 1)
 PY
 then
-    echo "SKIP ${RUN_NAME}: summary.json succeeded"; echo "JOB→RUN ${WANDB_RUN_NAME}"; exit 0
+    echo "SKIP ${RUN_NAME}: summary.json exit_code=0 + export_complete"; echo "JOB→RUN ${WANDB_RUN_NAME}"; exit 0
 fi
 
 RESUME=()

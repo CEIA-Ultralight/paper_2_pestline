@@ -23,19 +23,22 @@
 #SBATCH --mem=96G
 #SBATCH --time=12:00:00
 #SBATCH --signal=B:SIGUSR1@300
+#SBATCH --requeue
+#SBATCH --open-mode=append
 #SBATCH --output=/raid/user_marcospaulo/slurm_logs/%x_%j.out
 
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${HERE}/../../common/slurm/b200_common.sh"
+# sbatch copia o script para /var/spool/slurmd/<job>/ -> nao usar dirname(BASH_SOURCE)
+REPO="${REPO:-/raid/user_marcospaulo/paper_2_pestline}"
+source "${REPO}/common/slurm/b200_common.sh"
 b200_guard
-TRAIN="${HERE}/train_classifier_b200.sh"
+TRAIN="${REPO}/rq2_cascade/slurm/train_classifier_b200.sh"
 export WANDB_PROJECT="${WANDB_PROJECT_RQ2}"
 SEEDS="${SEEDS:-42 84 126}"
 VARIANTS="${VARIANTS:-baseline parts}"
 
-clf_done() {  # $1 = OUT dir
-    [[ -f "$1/summary.json" ]] && grep -q '"status": *"succeeded"' "$1/summary.json" && grep -q '"export_complete": *true' "$1/summary.json"
+clf_done() {  # $1 = OUT dir; architecture_lab grava status completed|early_stop|budget|interrupted|failed
+    [[ -f "$1/summary.json" ]] && grep -q '"exit_code": *0[,}]' "$1/summary.json" && grep -q '"export_complete": *true' "$1/summary.json"
 }
 
 echo "CHAIN B inicio $(date) job=${SLURM_JOB_ID} variants=${VARIANTS} seeds=${SEEDS}"

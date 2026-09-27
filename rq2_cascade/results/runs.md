@@ -27,3 +27,15 @@ Registro job → run W&B (escrito pelo `slurm-runner`; coluna "usado em" pelo `a
 | 2026-09-09 | n/d | `common/slurm/eval_test_campaign.sh` | n/d | det. default / clf. 42 e 84 | TEST (55 imgs, 918 GT): E0/E1/E2/E2_sliced + cascatas A1/A2/E3–E5 + ensembles | pestline/fly-species/test-campaign-036ef018 (036ef018cfcf494d8e15eb49e95acc1e) | finished, 0,30 h | `cascade_test_single_seed.csv`, `classifiers_single_seed.csv`, `rq3_tiny_object/results/sahi_tta_single_seed.csv` (PAPER_FACTS §3, §4) |
 
 Notas (analyst, 2026-09-26): jobs 32005/32009 inferidos dos diagnósticos de latência dos runs A1/A2 (`slurm_job_id`); demais "n/d" não estão no W&B nem em `docs/`. Seeds E3–E5 não registradas. Todos os runs são **single-seed**; 42 vs 84 são dois runs independentes, não média.
+
+| Data | Job | Script | Commit (repo / baseline) | Seed | Variante | Run W&B (pestline/<projeto>/<nome>) | Status | Usado em |
+|---|---|---|---|---|---|---|---|---|
+| 2026-09-26 | 33320 | `common/slurm/smoke_b200.sh` → `rq2_cascade/slurm/train_classifier_b200.sh` | 9297f13+infra | 42 | smoke: ConvNeXt-T CE 1 ép. (256/128 crops, sem W&B) + cascata VAL 5 imgs | — | SMOKE_OK | — (não usar) |
+| 2026-09-26 | 33322 (cadeia B) | `rq2_cascade/slurm/chain_B_classifiers.sh` → `train_classifier_b200.sh` | 9297f13+infra / b36580a | 42 | ConvNeXt-T CE (baseline), 24 ép., patience 5, 384 px, VAL | pestline/paper2-rq2-cascade/clf_convnext_t_ce_s42 | submetido/rodando | |
+| 2026-09-26 | 33322 (cadeia B) | idem | idem | 84 | ConvNeXt-T CE | pestline/paper2-rq2-cascade/clf_convnext_t_ce_s84 | submetido (fila da cadeia) | |
+| 2026-09-26 | 33322 (cadeia B) | idem | idem | 126 | ConvNeXt-T CE | pestline/paper2-rq2-cascade/clf_convnext_t_ce_s126 | submetido (fila da cadeia) | |
+| 2026-09-26 | 33322 (cadeia B) | idem | idem | 42 | ConvNeXt-T partes | pestline/paper2-rq2-cascade/clf_convnext_t_parts_s42 | submetido (fila da cadeia) | |
+| 2026-09-26 | 33322 (cadeia B) | idem | idem | 84 | ConvNeXt-T partes | pestline/paper2-rq2-cascade/clf_convnext_t_parts_s84 | submetido (fila da cadeia) | |
+| 2026-09-26 | 33322 (cadeia B) | idem | idem | 126 | ConvNeXt-T partes | pestline/paper2-rq2-cascade/clf_convnext_t_parts_s126 | submetido (fila da cadeia) | |
+
+Notas (slurm-runner, 2026-09-26): partição **b200n1**, QOS `onejob` (máx. 2 jobs). Log `/raid/user_marcospaulo/slurm_logs/p2-chainB-classifiers_33322.out`; saídas `/raid/user_marcospaulo/flydet_runs/clf_convnext_t_*/{best.pt,last.pt,summary.json}`. `architecture_lab` grava `status` ∈ {completed, early_stop, budget, interrupted, failed}; a cadeia considera concluído `exit_code=0` + `export_complete=true` (o check antigo por `"succeeded"` nunca casava — corrigido). Se `status=budget` (MAX_HOURS=1,25 h) aparecer, o analyst deve tratar como treino truncado. Cadeia D (`chain_D_cascade_cross.sh`) depende de `CHAIN_A_DONE` + `CHAIN_B_DONE`.

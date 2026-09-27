@@ -21,12 +21,16 @@
 #SBATCH --output=/raid/user_marcospaulo/slurm_logs/%x_%j.out
 
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${HERE}/b200_common.sh"
+# sbatch copia o script para /var/spool/slurmd/<job>/ -> nao usar dirname(BASH_SOURCE)
+REPO="${REPO:-/raid/user_marcospaulo/paper_2_pestline}"
+export B200_REQUEUE=0                       # smoke nunca re-enfileira
+source "${REPO}/common/slurm/b200_common.sh"
 b200_guard
+# Runs do smoke vao para um projeto W&B separado (nao poluir paper2-rq2/rq3)
+export WANDB_PROJECT="${WANDB_PROJECT:-paper2-smoke}"
 SMOKE_ROOT="${SMOKE_ROOT:-${RUNS_ROOT}/smoke_b200}"
 mkdir -p "${SMOKE_ROOT}"
-echo "SMOKE inicio $(date) job=${SLURM_JOB_ID} node=${SLURM_NODELIST:-?} image=${IMAGE}"
+echo "SMOKE inicio $(date) job=${SLURM_JOB_ID} node=${SLURM_NODELIST:-?} image=${IMAGE} wandb=${WANDB_ENTITY}/${WANDB_PROJECT}"
 
 # 0) ambiente (direto, sem chain_run: heredoc como stdin)
 b200_apptainer /opt/venv/bin/python - <<'PY'

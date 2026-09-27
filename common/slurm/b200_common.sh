@@ -42,8 +42,8 @@ export YOLO_CONFIG_DIR="${USER_ROOT}/.config/Ultralytics"
 export MPLCONFIGDIR="${USER_ROOT}/.cache/matplotlib"
 export XDG_CACHE_HOME="${USER_ROOT}/.cache"
 export TMPDIR="${USER_ROOT}/tmp"
-export APPTAINER_CACHEDIR="${USER_ROOT}/cache/apptainer"
-export APPTAINER_TMPDIR="${USER_ROOT}/cache/apptainer/tmp"
+export APPTAINER_CACHEDIR="${USER_ROOT}/.cache/apptainer"
+export APPTAINER_TMPDIR="${APPTAINER_CACHEDIR}/tmp"
 mkdir -p "${WANDB_DIR}" "${WANDB_CACHE_DIR}" "${WANDB_CONFIG_DIR}" "${HF_HOME}" "${TORCH_HOME}" \
          "${PIP_CACHE_DIR}" "${YOLO_CONFIG_DIR}" "${MPLCONFIGDIR}" "${TMPDIR}" "${APPTAINER_TMPDIR}"
 
@@ -96,10 +96,33 @@ b200_apptainer() {
 # Slurm envia SIGUSR1 300 s antes do fim (--signal=B:SIGUSR1@300). O trap
 # encaminha ao filho (que salva last.pt e sai 75) e a cadeia sai 75 para ser
 # ressubmetida (reentrante: cada etapa pula se ja concluida).
+# Re-enfileiramento: SO o script de topo (batch script do Slurm; B200_TOP_PID == $$)
+# chama `scontrol requeue`, e apenas quando o motivo foi SIGUSR1 do Slurm ou rc 75
+# espontaneo do filho (ex.: --max-hours do architecture_lab). SIGTERM/SIGINT
+# (scancel) NUNCA re-enfileiram. Requer #SBATCH --requeue e --open-mode=append.
+# Desligar com B200_REQUEUE=0; teto de re-enfileiramentos: B200_MAX_REQUEUE (20).
+if [[ -z "${B200_TOP_PID:-}" ]]; then export B200_TOP_PID="$$"; fi
+B200_MAX_REQUEUE="${B200_MAX_REQUEUE:-20}"
 CHAIN_CHILD=''
 CHAIN_INTERRUPTED=0
-_chain_forward() { CHAIN_INTERRUPTED=1; [[ -z "${CHAIN_CHILD}" ]] || kill -USR1 "${CHAIN_CHILD}" 2>/dev/null || true; }
-trap _chain_forward USR1 TERM INT
+CHAIN_SIGNAL=''
+_chain_forward() { CHAIN_INTERRUPTED=1; CHAIN_SIGNAL="${CHAIN_SIGNAL:-$1}"; [[ -z "${CHAIN_CHILD}" ]] || kill -USR1 "${CHAIN_CHILD}" 2>/dev/null || true; }
+trap '_chain_forward USR1' USR1
+trap '_chain_forward TERM' TERM
+trap '_chain_forward INT' INT
+
+_chain_exit75() {
+    if [[ "${B200_TOP_PID}" == "$$" && -n "${SLURM_JOB_ID:-}" && "${B200_REQUEUE:-1}" == 1 \
+          && ( -z "${CHAIN_SIGNAL}" || "${CHAIN_SIGNAL}" == USR1 ) ]]; then
+        if (( ${SLURM_RESTART_COUNT:-0} < B200_MAX_REQUEUE )); then
+            echo "REQUEUE job ${SLURM_JOB_ID} (restart ${SLURM_RESTART_COUNT:-0}/${B200_MAX_REQUEUE}, motivo=${CHAIN_SIGNAL:-rc75}) $(date '+%F %T')"
+            scontrol requeue "${SLURM_JOB_ID}" || echo "AVISO: scontrol requeue falhou — ressubmeter manualmente"
+        else
+            echo "AVISO: teto de requeues (${B200_MAX_REQUEUE}) atingido — ressubmeter manualmente"
+        fi
+    fi
+    exit 75
+}
 
 chain_run() {
     echo ""
@@ -108,9 +131,9 @@ chain_run() {
     CHAIN_CHILD=$!
     local rc=0
     wait "${CHAIN_CHILD}" || rc=$?
-    if [[ "${CHAIN_INTERRUPTED}" == 1 ]]; then wait "${CHAIN_CHILD}" 2>/dev/null || true; echo "CHAIN_INTERRUPTED rc=75"; exit 75; fi
+    if [[ "${CHAIN_INTERRUPTED}" == 1 ]]; then wait "${CHAIN_CHILD}" 2>/dev/null || true; echo "CHAIN_INTERRUPTED sinal=${CHAIN_SIGNAL} rc=75"; _chain_exit75; fi
     CHAIN_CHILD=''
-    if [[ "${rc}" == 75 ]]; then echo "CHAIN_STEP_PREEMPTED rc=75 — ressubmeter"; exit 75; fi
+    if [[ "${rc}" == 75 ]]; then echo "CHAIN_STEP_PREEMPTED rc=75 — ressubmeter"; _chain_exit75; fi
     if [[ "${rc}" != 0 ]]; then echo "CHAIN_ABORT: etapa falhou rc=${rc} — $*"; exit "${rc}"; fi
 }
 

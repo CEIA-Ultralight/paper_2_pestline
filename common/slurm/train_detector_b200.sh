@@ -33,11 +33,14 @@
 #SBATCH --mem=96G
 #SBATCH --time=06:00:00
 #SBATCH --signal=B:SIGUSR1@300
+#SBATCH --requeue
+#SBATCH --open-mode=append
 #SBATCH --output=/raid/user_marcospaulo/slurm_logs/%x_%j.out
 
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${HERE}/b200_common.sh"
+# sbatch copia o script para /var/spool/slurmd/<job>/ -> nao usar dirname(BASH_SOURCE)
+REPO="${REPO:-/raid/user_marcospaulo/paper_2_pestline}"
+source "${REPO}/common/slurm/b200_common.sh"
 b200_guard
 
 : "${RUN_NAME:?Defina RUN_NAME (ex.: E0_s0, E10_nwd_w0.5_s1)}"
