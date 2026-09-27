@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""Avaliacao de detectores no VAL: vanilla, TTA e ensemble WBF (experimento item 6).
+"""Avaliacao de detectores num split: vanilla, TTA e ensemble WBF (experimento item 6 / cadeia C).
 
 Uso (dentro do container):
-    python eval_wbf_tta.py --data /path/to/data.yaml --detectors tag=ckpt.pt [tag=ckpt.pt ...]
+    python eval_wbf_tta.py --data /path/to/data.yaml --split test --detectors tag=ckpt.pt [tag=ckpt.pt ...]
 
 Produz em --out:
-    val_vanilla_<tag>/   — metrics do Ultralytics por detector
-    val_tta_<tag>/       — idem com augment=True (TTA)
-    val_wbf/             — summary.json com mAP50/mAP50:95 do ensemble WBF
+    <split>_vanilla_<tag>/   — metrics do Ultralytics por detector
+    <split>_tta_<tag>/       — idem com augment=True (TTA)
+    summary.json             — vanilla_<tag>/tta_<tag> (mAP50, mAP50:95) e wbf_ensemble (mAP50, >= 2 detectores)
 
 WBF: funde as predicoes dos detectores por imagem (Weighted Boxes Fusion,
 Solovyev et al. 2021, arXiv:1910.13302) e avalia contra o GT do data.yaml.
-Implementacao propria, sem dependencia externa.
+Implementacao propria, sem dependencia externa. Com UM detector nao ha ensemble
+(so vanilla + TTA); --wbf-only pula as avaliacoes vanilla/TTA (ensemble de
+detectores ja avaliados individualmente). --wandb loga o summary como run de eval.
 """
 
 import argparse
 import json
+import os
 from pathlib import Path
 
 import numpy as np
-import torch
 import yaml
 from ultralytics import YOLO
 
@@ -130,12 +132,12 @@ def evaluate(pred_per_img, gt_per_img, n_classes, iou_thr=0.5):
     return float(np.mean(aps)) if aps else 0.0
 
 
-def load_gt(data_yaml_path):
-    """Le o split val do data.yaml e retorna {img_stem: [(box_xyxy_px, cls), ...]}."""
+def load_gt(data_yaml_path, split="val"):
+    """Le o split do data.yaml e retorna {img_path: [(box_xyxy_px, cls), ...]}."""
     with open(data_yaml_path) as fh:
         data = yaml.safe_load(fh)
     root = Path(data["path"])
-    val = data["val"]
+    val = data[split]
     val_dir = root / val if not str(val).startswith("/") else Path(val)
     imgs = sorted(p for p in val_dir.glob("*") if p.suffix.lower() in {".jpg", ".jpeg", ".png"})
     gt = {}
@@ -159,20 +161,26 @@ def load_gt(data_yaml_path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", required=True)
+    ap.add_argument("--split", default="val", choices=("val", "test"))
     ap.add_argument("--detectors", nargs="+", required=True, help="tag=caminho.pt")
     ap.add_argument("--out", required=True)
     ap.add_argument("--imgsz", type=int, default=1920)
     ap.add_argument("--conf", type=float, default=0.001)
+    ap.add_argument("--wbf-only", action="store_true", help="pula vanilla/TTA; so o ensemble WBF")
+    ap.add_argument("--wandb", action="store_true")
+    ap.add_argument("--wandb-entity", default="pestline")
+    ap.add_argument("--wandb-project", default=os.environ.get("WANDB_PROJECT", "paper2-rq3-tiny-object"))
+    ap.add_argument("--wandb-run-name", default=None)
     args = ap.parse_args()
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    gt, names, imgs = load_gt(args.data)
+    gt, names, imgs = load_gt(args.data, args.split)
     n_classes = len(names)
-    print(f"VAL: {len(imgs)} imagens, {sum(len(v) for v in gt.values())} GT, {n_classes} classes")
+    print(f"{args.split.upper()}: {len(imgs)} imagens, {sum(len(v) for v in gt.values())} GT, {n_classes} classes")
 
-    results = {}
+    results = {"split": args.split, "imgsz": args.imgsz, "conf": args.conf}
     preds_per_detector = {}
 
     for spec in args.detectors:
@@ -182,16 +190,21 @@ def main():
             continue
         model = YOLO(ckpt)
 
-        # vanilla
-        m = model.val(data=args.data, split="val", imgsz=args.imgsz, project=str(out), name=f"val_vanilla_{tag}", verbose=False)
-        results[f"vanilla_{tag}"] = {"map50": float(m.box.map50), "map5095": float(m.box.map)}
-        print(f"vanilla {tag}: mAP50={m.box.map50:.4f} mAP50:95={m.box.map:.4f}")
+        if not args.wbf_only:
+            # vanilla
+            m = model.val(data=args.data, split=args.split, imgsz=args.imgsz, project=str(out),
+                          name=f"{args.split}_vanilla_{tag}", verbose=False)
+            results[f"vanilla_{tag}"] = {"map50": float(m.box.map50), "map5095": float(m.box.map)}
+            print(f"vanilla {tag}: mAP50={m.box.map50:.4f} mAP50:95={m.box.map:.4f}")
 
-        # TTA
-        m = model.val(data=args.data, split="val", imgsz=args.imgsz, augment=True, project=str(out), name=f"val_tta_{tag}", verbose=False)
-        results[f"tta_{tag}"] = {"map50": float(m.box.map50), "map5095": float(m.box.map)}
-        print(f"tta     {tag}: mAP50={m.box.map50:.4f} mAP50:95={m.box.map:.4f}")
+            # TTA
+            m = model.val(data=args.data, split=args.split, imgsz=args.imgsz, augment=True, project=str(out),
+                          name=f"{args.split}_tta_{tag}", verbose=False)
+            results[f"tta_{tag}"] = {"map50": float(m.box.map50), "map5095": float(m.box.map)}
+            print(f"tta     {tag}: mAP50={m.box.map50:.4f} mAP50:95={m.box.map:.4f}")
 
+        if len(args.detectors) < 2:
+            continue  # WBF precisa de >= 2 detectores; nao gasta GPU com predicoes inuteis
         # predicoes para WBF (conf baixo, fundimos depois)
         dets = {}
         for img in imgs:
@@ -216,6 +229,18 @@ def main():
 
     (out / "summary.json").write_text(json.dumps(results, indent=2))
     print(f"SUMMARY {out / 'summary.json'}")
+
+    if args.wandb:
+        import wandb
+
+        run = wandb.init(entity=args.wandb_entity, project=args.wandb_project, job_type="eval",
+                         name=args.wandb_run_name or f"ttawbf_{args.split}", dir=str(out),
+                         config={"split": args.split, "imgsz": args.imgsz, "conf": args.conf,
+                                 "detectors": args.detectors, "wbf_only": args.wbf_only})
+        run.summary.update({f"{k}/{mk}": mv for k, v in results.items() if isinstance(v, dict)
+                            for mk, mv in v.items() if isinstance(mv, (int, float))})
+        run.save(str(out / "summary.json"), base_path=str(out), policy="now")
+        run.finish()
 
 
 if __name__ == "__main__":

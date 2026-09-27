@@ -7,6 +7,15 @@
 # A UNICA diferenca entre experimentos sao as variaveis FLYDET_NWD_* / FLYDET_RFLA
 # (patch monkeypatch em rq3_tiny_object/patches, aplicado por train_nwd.py).
 #
+# Variantes de arquitetura (E1 head P2, E7 yolo26l):
+#   MODEL=yolo26l.pt                    -> pesos .pt de ${MODELS_DIR} (receita igual, so muda o checkpoint)
+#   MODEL_CFG=yolo26m-p2.yaml MODEL=yolo26m.pt
+#       -> treina a partir do YAML (Ultralytics resolve yolo26m-p2.yaml = yolo26-p2.yaml escala m) com
+#          FLYDET_PRETRAINED=${WORK}/models/${MODEL} (Ultralytics `pretrained=<path>`: camadas de shape
+#          compativel herdam yolo26m.pt; head P2 nova comeca aleatoria). Nao ha yolo26m-p2.pt oficial.
+#   BATCH sobrescritivel por env (P2 a imgsz 1920 usa ~1.5-2x a memoria de ativacao do E0; no B200
+#   de 178 GB batch 8 deve caber — se OOM, BATCH=4).
+#
 # Uso (pelas cadeias, com env):
 #   RUN_NAME=E0_s0 FLYDET_SEED=0 FLYDET_NWD_MODE=off bash common/slurm/train_detector_b200.sh
 #   RUN_NAME=E10_nwd_w0.5_s1 FLYDET_SEED=1 FLYDET_NWD_MODE=nwd FLYDET_NWD_W=0.5 bash ...
@@ -54,6 +63,7 @@ export FLYDET_SAVE_PERIOD="${FLYDET_SAVE_PERIOD:-10}"
 export FLYDET_DATASET_ROOT="${DATA_ROOT}"
 
 MODEL="${MODEL:-yolo26m.pt}"
+MODEL_CFG="${MODEL_CFG:-}"        # YAML de arquitetura (ex.: yolo26m-p2.yaml); vazio = treina de ${MODEL}
 EPOCHS="${EPOCHS:-150}"
 BATCH="${BATCH:-8}"
 IMGSZ="${IMGSZ:-1920}"
@@ -67,6 +77,7 @@ mkdir -p "${WORK}/models" "${WORK}/runs"
 echo "============================== ${RUN_NAME} =============================="
 echo "Job:     ${SLURM_JOB_ID} @ ${SLURM_NODELIST:-?}  particao=${SLURM_JOB_PARTITION}"
 echo "Receita: ${MODEL} epochs=${EPOCHS} batch=${BATCH} imgsz=${IMGSZ} patience=${PATIENCE} save_period=${FLYDET_SAVE_PERIOD}"
+[[ -z "${MODEL_CFG}" ]] || echo "Arquitetura: ${MODEL_CFG} (pretrained=${MODEL})"
 echo "Seed:    FLYDET_SEED=${FLYDET_SEED}  NWD: mode=${FLYDET_NWD_MODE} w=${FLYDET_NWD_W} C=${FLYDET_NWD_C} scope=${FLYDET_NWD_SCOPE} rfla=${FLYDET_RFLA}"
 echo "W&B:     ${WANDB_ENTITY}/${WANDB_PROJECT} run=${WANDB_RUN_NAME}"
 echo "WORK:    ${WORK}   inicio=$(date)"
@@ -96,11 +107,14 @@ LAST="$(ls -1t "${WORK}"/runs/*/weights/last.pt 2>/dev/null | head -1 || true)"
 
 if [[ -z "${SUMMARY}" ]]; then
     MODEL_ARG="${MODEL}"
-    unset FLYDET_RESUME
+    unset FLYDET_RESUME FLYDET_PRETRAINED
     if [[ -n "${LAST}" ]]; then
         echo "RESUME: ${LAST}"
         MODEL_ARG="${LAST}"
         export FLYDET_RESUME=1
+    elif [[ -n "${MODEL_CFG}" ]]; then
+        MODEL_ARG="${MODEL_CFG}"
+        export FLYDET_PRETRAINED="${WORK}/models/${MODEL}"
     fi
 
     # ---------------- pre-check CPU (fail-fast): versoes + patch aplica -----------

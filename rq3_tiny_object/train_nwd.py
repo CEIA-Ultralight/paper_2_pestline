@@ -8,6 +8,9 @@ Variaveis de ambiente lidas aqui (alem das do nwd_patch/rfla_patch):
     FLYDET_SEED         seed inteiro -> Ultralytics ``seed`` (+ ``deterministic=True``)
     FLYDET_SAVE_PERIOD  inteiro -> Ultralytics ``save_period`` (default do yolo.yaml: 1)
     FLYDET_RESUME       "1" -> Ultralytics ``resume=True`` (o ``--model`` deve ser o last.pt)
+    FLYDET_PRETRAINED   caminho .pt -> Ultralytics ``pretrained=<path>``: usado quando ``--model`` e um
+                        YAML de arquitetura (ex.: yolo26m-p2.yaml, E1) para inicializar as camadas
+                        de shape compativel a partir de yolo26m.pt; ignorado pelo Ultralytics em resume
     FLYDET_NWD_MODE     nwd|gcd|off (off = baseline E0 sem patch)
     FLYDET_NWD_SCOPE    loss|assigner|both (ver nwd_patch.py)
     FLYDET_RFLA         "1" -> patch RFLA
@@ -49,6 +52,9 @@ def yolo_overrides(env) -> dict:
         overrides["save_period"] = int(save_period)
     if (env.get("FLYDET_RESUME") or "").strip() == "1":
         overrides["resume"] = True
+    pretrained = (env.get("FLYDET_PRETRAINED") or "").strip()
+    if pretrained:
+        overrides["pretrained"] = pretrained
     return overrides
 
 

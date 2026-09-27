@@ -26,12 +26,14 @@ class _StopAfterTrain(Exception):
 
 
 class _FakeYOLO:
-    """Substituto de ``ultralytics.YOLO`` que grava os kwargs de train()."""
+    """Substituto de ``ultralytics.YOLO`` que grava o modelo pedido e os kwargs de train()."""
 
     recorded: ClassVar[list[dict]] = []
+    models: ClassVar[list[str]] = []
 
     def __init__(self, model):
         self.model_name = model
+        _FakeYOLO.models.append(model)
 
     def to(self, device):
         return self
@@ -45,7 +47,7 @@ class _FakeYOLO:
 
 
 def _run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, seed: str | None, extra_env=None,
-         extra_argv=None) -> dict:
+         extra_argv=None, model: str = "yolo26m.pt") -> dict:
     """Roda train_nwd.main num cwd temporario com FLYDET_SEED=seed e devolve os kwargs de train."""
     from fly_det import trainer
 
@@ -55,6 +57,7 @@ def _run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, seed: str | None, extr
     monkeypatch.delenv("FLYDET_RFLA", raising=False)
     monkeypatch.delenv("FLYDET_SAVE_PERIOD", raising=False)
     monkeypatch.delenv("FLYDET_RESUME", raising=False)
+    monkeypatch.delenv("FLYDET_PRETRAINED", raising=False)
     if seed is None:
         monkeypatch.delenv("FLYDET_SEED", raising=False)
     else:
@@ -68,10 +71,11 @@ def _run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, seed: str | None, extr
     monkeypatch.setattr(trainer, "yolo", _FakeYOLO)
     monkeypatch.setattr(trainer.torch.cuda, "is_available", lambda: False)
     _FakeYOLO.recorded.clear()
+    _FakeYOLO.models.clear()
 
     argv = [
         "--backend", "yolo",
-        "--model", "yolo26m.pt",
+        "--model", model,
         "--data", str(data_yaml),
         "--project", str(tmp_path / "runs"),
         "--epochs", "1",
@@ -128,6 +132,25 @@ def test_nwd_config_json_records_seed(monkeypatch, tmp_path):
     assert cfg["seed"] == 2
     assert cfg["deterministic"] is True
     assert cfg["nwd"] is False  # FLYDET_NWD_MODE=off
+
+
+def test_p2_yaml_model_with_pretrained_env(monkeypatch, tmp_path):
+    """E1 (cadeia C): MODEL_CFG=yolo26m-p2.yaml + FLYDET_PRETRAINED=<WORK>/models/yolo26m.pt
+    -> YOLO('yolo26m-p2.yaml') e model.train(pretrained='<path>') (Ultralytics carrega os
+    tensores compativeis de yolo26m.pt na arquitetura P2)."""
+    pretrained = str(tmp_path / "models" / "yolo26m.pt")
+    kwargs = _run(monkeypatch, tmp_path, "1", extra_env={"FLYDET_PRETRAINED": pretrained},
+                  model="yolo26m-p2.yaml")
+    assert _FakeYOLO.models == ["yolo26m-p2.yaml"]
+    assert kwargs["pretrained"] == pretrained
+    assert kwargs["seed"] == 1
+    cfg = json.loads((tmp_path / "nwd_config.json").read_text())
+    assert cfg["pretrained"] == pretrained
+
+
+def test_no_pretrained_env_leaves_ultralytics_default(monkeypatch, tmp_path):
+    kwargs = _run(monkeypatch, tmp_path, "0")
+    assert "pretrained" not in kwargs  # E0/E10: pesos vem do --model .pt, pretrained=True default
 
 
 def test_patches_dir_on_sys_path():
