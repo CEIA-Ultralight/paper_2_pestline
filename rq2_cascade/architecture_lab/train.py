@@ -168,8 +168,8 @@ def build_parser():
     parser.add_argument("--limit-val", type=_positive_int)
     parser.add_argument("--wandb", action="store_true", help="Required unless BOTH smoke limits are provided")
     parser.add_argument("--wandb-entity", default="pestline")
-    parser.add_argument("--wandb-project", default="fly-species")
-    parser.add_argument("--wandb-run-name")
+    parser.add_argument("--wandb-project", default=os.environ.get("WANDB_PROJECT", "paper2-rq2-cascade"))
+    parser.add_argument("--wandb-run-name", default=os.environ.get("WANDB_RUN_NAME") or None)
     parser.add_argument("--with-background", action="store_true",
                         help="Proposal-crop datasets: 8 classes with extra BG (alphabetical first)")
     return parser
