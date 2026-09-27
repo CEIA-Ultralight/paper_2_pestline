@@ -10,6 +10,12 @@ fica dentro da variância entre seeds. Resultado negativo é publicável como ta
 
 ## O que já temos (VAL mAP50, `results.csv` Ultralytics, protocolo idêntico, single-seed)
 
+> **Verificado no W&B em 2026-09-26** (`results/nwd_sweep_single_seed.csv`, `results/runs.md`): sob o protocolo
+> verificável (summary W&B, mesma validação final) **E10 0,8544 < E0 0,8605** — o "+1,4 pp" abaixo só existe comparando
+> max-over-epochs do E10 com `best.pt` do E0 e **não é claim** (DECISIONS 2026-09-25). A cadeia 33015 **abortou**:
+> `E10_nwd_seed0/1/2` têm summary idêntico ao E10 (todas seed 0), `E0_baseline_seed1` crashed, E0 s2 / E7 / E14 / TTA-WBF
+> nunca rodaram. Treinos duram **0,7–1,3 h** cada (não 6–10 h). Seção 5.3 escrita com estes dados (manuscript 77459a1).
+
 | Exp | Variante | mAP50 | Job / onde |
 |---|---|---:|---|
 | E0 | baseline CIoU | 0,8565 | `../common/slurm/E0_yolo26m_baseline.sh` |
@@ -33,9 +39,11 @@ e chama o trainer do `fly_det`. Testes: `../tests/test_nwd_patch.py` (7 testes C
       seed 0 — o `--seed` não chega ao Ultralytics. Corrigir e cobrir com teste antes de qualquer rerun.
 - [ ] **Rerun 3×3**: E0 seeds {0,1,2} vs E10 (NWD w=0,5) seeds {0,1,2}, mesma receita (150 ép., batch 8,
       imgsz 1920, patience 30) → média ± std VAL e **uma** avaliação no TEST por variante. É o caminho crítico
-      (6 treinos de ~6–10 h em H100). Orquestrador base: `slurm/E10y_full_chain.sh`.
-- [ ] E14 (NWD + RFLA) e E7 (yolo26l + NWD) — rodaram no 33015? Conferir W&B; se sim, exportar; se não, decidir
-      se entram (pelo menos 1 seed de RFLA para citar).
+      (5 treinos novos de ~1 h em H100 ≈ 6 GPU-h). Orquestrador base: `slurm/E10y_full_chain.sh`.
+- [ ] E14 (NWD + RFLA) e E7 (yolo26l + NWD) — **não rodaram** no 33015 (verificado W&B). Decidir se entram
+      (pelo menos 1 seed de RFLA para citar; ≈ 1 GPU-h cada).
+- [x] Exportar o sweep single-seed existente → `results/nwd_sweep_single_seed.csv`, `results/sahi_tta_single_seed.csv` (analyst, 2026-09-26).
+- [x] Protocolo de SAHI/tiles/TTA-WBF/NWD registrado na Seção 4.3 (writer, manuscript 77459a1).
 - [ ] Verificar se o "+1,4 pp" do E10 sobrevive: se |Δ| < std, reportar como **sem efeito** (tese do paper).
 - [ ] Análise de por quê: distribuição de IoU/NWD nos positivos do assigner, curva de recall por faixa de tamanho
       (<32 / 32–48 / >48 px) E0 vs E10 → `results/recall_by_size.csv`.

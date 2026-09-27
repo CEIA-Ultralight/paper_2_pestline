@@ -11,6 +11,11 @@ reduz AP.
 
 ## O que já temos (single-seed, seed 42 salvo indicação)
 
+> **Exportado em 2026-09-26** (analyst): `results/cascade_test_single_seed.csv`, `cascade_val_single_seed.csv`,
+> `classifiers_single_seed.csv`, `runs.md`. Achados: o resultado principal é a política **label_only**; o controle CE
+> seed 42 (F1 74,95) ≈ partes (75,35) → o ganho vem de **cascatear**, não da cabeça de partes; partes seed 84
+> label_only dá P 63,7 / R 77,9 / **F1 70,1 (abaixo do E0)**. Seções 4.2/4.4 e 5.2 escritas (manuscript 77459a1).
+
 | Item | Onde | Valor |
 |---|---|---|
 | Extração de crops (GT e propostas do YOLO) | `extract_crops.py`, `extract_proposal_crops.py`, `slurm/extract_proposal_crops.sh` | propostas cobrem 94,9 % dos GT / 97,9 % das espécies (VAL) |
