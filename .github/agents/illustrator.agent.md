@@ -1,5 +1,6 @@
 ---
 name: illustrator
+model: ['Claude Sonnet 5.5 (copilot)', 'Claude Sonnet 5 (copilot)']
 description: "Ilustrador do paper_2_pestline. Use para: criar figuras (matplotlib, PDF vetorial) e tabelas LaTeX (booktabs) a partir EXCLUSIVAMENTE de rq*/results/*.csv, um script por figura em figures/src/, saída em figures/out/ e cópia para manuscript/fig/ e manuscript/tab/; montar painéis qualitativos de detecções; ajustar ao estilo SCITEPRESS (coluna simples/dupla, fontes legíveis). Só CPU. Nunca digita números à mão."
 argument-hint: "Ex.: 'boxplot mAP50 por seed E0 vs E10 a partir de rq3_tiny_object/results/nwd_3x3.csv', 'tabela LaTeX do trade-off da cascata'"
 tools: [read, search, edit, execute]

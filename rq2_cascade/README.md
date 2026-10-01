@@ -35,19 +35,25 @@ reduz AP.
 
 ## O que falta
 
-- [ ] **Multi-seed do classificador** (≥3 seeds: 42, 84 + 1) com o mesmo detector E0, avaliado no TEST →
-      média ± std de recall/precisão/F1 por espécie. É o pré-requisito da contribuição 1.
-- [ ] **Multi-seed do detector** na cascata (usar os E0 seeds 0–2 do RQ3) — cruzamento detector × classificador.
-- [ ] **McNemar pareado** (por GT de espécie: acertou/errou no single-stage vs cascata) → `results/mcnemar.csv`.
-- [ ] **Matriz de confusão** single-stage vs cascata no TEST (4 espécies + INS/NOISE), com foco em MC↔MV e MF↔MC
-      — é a evidência direta contra o claim de irredutibilidade. Script existente: `../common/log_confusion_wandb.py`.
-- [ ] Reconciliar protocolos: mAP50 do harness (76,8 %) **não é comparável** ao `results.csv` do Ultralytics
-      (85,65 % VAL) — a tabela do paper usa um só protocolo, com nota.
-- [ ] Declarar seleção de modelo: classificador escolhido na VAL antes de olhar o TEST (limpo); TEST já
-      consultado → chamar de "consolidado", não "cego". Verificar se existe holdout nunca consultado.
-- [ ] Custo: registrar GPU-horas e latência por estágio → `results/latency.csv`.
-- [ ] Figuras: `fig_cascade_tradeoff.pdf` (recall/F1 ↑ vs mAP ↓ por seed), `fig_confusion.pdf`, exemplos
-      qualitativos MC↔MV corrigidos pela cascata.
+> **Campanha B200 (2026-09-27, cadeias B/D, analyst `e1d4bbe`, PAPER_FACTS §9)** fechou: multi-seed 3 det × 6 clf,
+> McNemar + bootstrap por imagem, confusão single vs cascata, oráculo de crops GT, latência, AP por classe.
+> Resultado: cascata E0×CE TEST R +3,0±2,2 / P −2,2±2,6 / F1 +0,1; acc|loc 77,0→80,1; oráculo 79,6±0,5 % (cascata
+> no teto); erro loc 2,1 % vs id ~20 %; MD→MV ~30 % e MC→MV ~15 % **não mudam** com CE (parts: MD→MV −12,7, MV→MD +5,9);
+> VAL inverte o sinal (VAL não é held-out). **Contradiz a tese atual** → `\TODO{AUTHOR DECISION}` no manuscrito (a235828).
+
+- [x] Multi-seed do classificador e do detector, McNemar, confusão, latência (B200; `results/*.csv`).
+- [ ] **Plano de exaustão da RQ2 (proposto 2026-09-30, aguardando aprovação)** — revisão de literatura em
+      `docs/related_work_map.md` §"RQ2 — revisão 2026-09-30":
+  - P0 CPU: TIDE single vs cascata; oráculo inverso (caixas do detector + classe GT); re-ranqueamento/calibração
+    (temperature scaling, fusão aprendida, top-2) com AP por espécie; oráculo estratificado por tamanho/nitidez/densidade;
+    risco–cobertura e abstenção hierárquica (família); confusão CE vs parts multi-seed; bootstrap por imagem como teste primário.
+  - P0 GPU/humano: ruído de rótulo — confident learning (5-fold OOF nos crops GT) + re-anotação cega de ~150 crops
+    MD/MV/MC por especialista (κ).
+  - P1 GPU: backbone foundation (DINOv3, BioCLIP 2, LP-FT) × 3 seeds; fusão tardia YOLO+classificador; curva de
+    sensibilidade à resolução do crop; cascata sobre yolo26l (E7); benchmark de latência dedicado.
+  - P2: crop duplo (justo + contexto), perda hierárquica, treino robusto a ruído (só se ruído ≥ 5 %).
+- [ ] Declarar seleção de modelo: VAL usada para `best.pt` → não é held-out; TEST já consultado → "consolidado".
+- [ ] Figuras: `fig_cascade_tradeoff.pdf`, `fig_confusion.pdf`, `fig_oracle_decomp.pdf`, exemplos qualitativos MD→MV.
 
 ## Saídas esperadas em `results/`
 

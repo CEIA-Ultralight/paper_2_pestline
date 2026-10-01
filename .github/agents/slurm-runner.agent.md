@@ -1,5 +1,6 @@
 ---
 name: slurm-runner
+model: ['Claude Haiku 4.5 (copilot)', 'GPT-5 mini (copilot)']
 description: "Operador da fila Slurm do paper_2_pestline — o ÚNICO agente que submete jobs de GPU. Use para: escrever/validar scripts sbatch em rq*/slurm/ e common/slurm/ (partição h100n2, Apptainer flydet-train.sif, wandb.env, save_period, resume, --signal SIGUSR1), submeter com sbatch, monitorar squeue/sacct/logs, e registrar job-id → run W&B → commit → seed em rq*/results/runs.md. Não escreve código Python, não analisa métricas."
 argument-hint: "Ex.: 'submeta o 3×3 E0 vs E10 da RQ3 (seeds 0,1,2)', 'estado dos jobs da RQ2', 'valide rq3_tiny_object/slurm/E10y_full_chain.sh'"
 tools: [read, search, edit, execute]

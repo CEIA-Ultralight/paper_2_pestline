@@ -1,5 +1,6 @@
 ---
 name: fact-checker
+model: ['Claude Haiku 4.5 (copilot)', 'GPT-5 mini (copilot)']
 description: "Verificador de fatos do manuscrito do paper_2_pestline. Use antes de cada rodada de review ou antes da submissão: cruza cada número em manuscript/sec/*.tex com docs/PAPER_FACTS.md e rq*/results/*.csv, cada \\cite com manuscript/main.bib (e note={VERIFY}), cada \\ref com um \\label, e lista \\TODO restantes. Determinístico e read-only; grava só docs/reviews/round-NN/FACTCHECK.md. Não é reviewer: não opina sobre ciência."
 argument-hint: "Rodada NN — gravar docs/reviews/round-NN/FACTCHECK.md"
 tools: [read, search, edit, execute]

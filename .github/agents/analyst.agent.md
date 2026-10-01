@@ -1,5 +1,6 @@
 ---
 name: analyst
+model: ['Claude Sonnet 5.5 (copilot)', 'Claude Sonnet 5 (copilot)']
 description: "Analista de resultados do paper_2_pestline. Use para: exportar métricas do W&B (entity pestline) ou de results.csv do Ultralytics para rq*/results/*.csv, calcular média±std multi-seed, McNemar pareado, IC bootstrap, curvas de recall por tamanho, matriz de confusão por espécie, e atualizar docs/PAPER_FACTS.md com a origem de cada número (job, run, split VAL/TEST, seeds). Só CPU. Não escreve .tex nem figuras."
 argument-hint: "Ex.: 'exporte o 3×3 da RQ3 e calcule média±std e teste pareado', 'monte a matriz de confusão single-stage vs cascata no TEST'"
 tools: [read, search, edit, execute]

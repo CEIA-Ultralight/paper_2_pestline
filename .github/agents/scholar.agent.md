@@ -1,5 +1,6 @@
 ---
 name: scholar
+model: ['Claude Sonnet 5.5 (copilot)', 'Claude Sonnet 5 (copilot)']
 description: "Pesquisador de literatura do paper_2_pestline. Use para: buscar trabalhos relacionados (arXiv, Semantic Scholar, sites de venue), ler um paper e extrair claim / setup / números / gap, verificar se uma citação existe e gerar a entrada BibTeX correta, posicionar nossas RQs contra a literatura, manter docs/related_work_map.md e manuscript/main.bib. Read-only no resto do repo; sem terminal."
 argument-hint: "Ex.: 'busque trabalhos 2025–2026 de cascata detector→classificador em insetos', 'verifique e gere o BibTeX de laekeman2025'"
 tools: [read, search, edit, web]

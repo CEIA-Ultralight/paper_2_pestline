@@ -1,5 +1,6 @@
 ---
 name: area-chair
+model: ['Claude Opus 5.5 (copilot)', 'Claude Opus 5 (copilot)']
 description: "AC — Area Chair da mesa redonda VISAPP 2027 do paper_2_pestline. Lê FACTCHECK.md e os 5 reviews (R1–R5) de uma rodada, compara com a rodada anterior (LEDGER), resolve conflitos, emite decisão (Accept / Borderline / Reject) e prioriza fixes com ID (F{NN}-{k}). Grava docs/reviews/round-NN/META.md e acrescenta a rodada em docs/LEDGER.md. Read-only no resto."
 argument-hint: "Rodada NN — ler docs/reviews/round-NN/, gravar META.md e atualizar docs/LEDGER.md"
 tools: [read, search, edit, execute]

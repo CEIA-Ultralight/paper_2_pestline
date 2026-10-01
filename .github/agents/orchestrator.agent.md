@@ -1,5 +1,6 @@
 ---
 name: orchestrator
+model: ['Claude Opus 5.5 (copilot)', 'Claude Opus 5 (copilot)']
 description: "Orquestrador do paper_2_pestline (VISAPP 2027). Recebe uma tarefa do autor, decompõe por questão de pesquisa (RQ1 dados, RQ2 cascata, RQ3 tiny-object), delega aos subagentes scholar / experimenter / slurm-runner / analyst / illustrator / writer na ordem certa, consolida e pede aprovação. Mantém rq*/README.md, docs/LEDGER.md e docs/DECISIONS.md. Único agente que atualiza os READMEs das RQs. Use para: planejar ou fechar uma RQ, preparar a submissão, rodar a mesa redonda de reviewers."
 argument-hint: "Ex.: 'fecha a RQ3', 'planeje a ablação da RQ1', 'rode a rodada 02 de review'"
 agents: [scholar, experimenter, slurm-runner, analyst, illustrator, writer, fact-checker, reviewer-applied-detection, reviewer-data-reproducibility, reviewer-rigor-stats, reviewer-domain-practitioner, reviewer-writing-visapp, area-chair]

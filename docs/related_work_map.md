@@ -187,3 +187,80 @@ transfere (cascata, com trade-off explícito) e o que não transfere (tiny-objec
    o classificador dedicado — usar a favor.
 3. Niyigena 2023 tem falha metodológica (marcadores coloridos) — criticável com cuidado.
 4. Monitorar Zenodo ILVO (set/2026) como possível avaliação cruzada até a camera-ready.
+
+---
+
+## RQ2 — revisão 2026-09-30
+
+Fontes: arXiv API (metadados/abstracts), Crossref, bioRxiv API, página do TIDE. Semantic Scholar
+respondeu 429, então a cobertura de CEA / Smart Agric. Technol. / Plant Methods foi só via Crossref
+(busca por título/tema): "não encontrei" não implica ausência. Leitura = abstracts/metadados, exceto
+Laekeman 2025 (íntegra, ver Bloco A). Chaves em `manuscript/main.bib`.
+
+### C.1 Cascatas detector→classificador (o que reportam)
+- **Korsch et al. 2023** (`korsch2023moth`, arXiv:2307.15427, moth scanner AMMOD): detector (mAP 99,01 %)
+  + classificador de 200 espécies; 93,13 % em recortes isolados; o pipeline sobe a acurácia de
+  espécie nas imagens de 79,62 % para 88,05 % (baseline não especificado no abstract). Reporta
+  implicitamente o "oráculo" (recortes) vs pipeline (gap ≈5 pp); no nosso caso o gap é ≈0,4 pp.
+- **Vyskočil & Picek 2024** (`vyskocil2024camera`, arXiv:2410.12769): MegaDetector + 2 classificadores
+  reduz o erro relativo de um classificador de imagem inteira em ~42 % (CCT20), ~48 % (CEF), ~75 % (WCT);
+  remover fundo reduz à metade o erro em locais novos. Baseline = classificador de imagem inteira,
+  **não** detector species-aware: comparação mais branda que a nossa.
+- **Jain et al. 2024** (`jain2024`) e **Bjerge et al. 2023/2026** (`bjerge2023hierarchical`,
+  `bjerge2026insectdct`, preprint): cascatas com classificação hierárquica; nenhum compara
+  com single-stage species-aware nem usa AP pós-cascata.
+- Achado de lacuna: não encontrei estudo controlado "single-stage species-aware vs cascata" em
+  insetos pequenos com oráculo + multi-seed. Reforça a novidade, mas é ausência na busca.
+
+### C.2 Baixa resolução em fine-grained
+- Cai et al. 2017 (`cai2017lowres`): SR + classificação fine-grained conjunta supera CNN comum
+  em Cars/CUB em baixa resolução. Chen et al. 2024 (`chen2024vimd`): SR + destilação HR→LR,
+  SOTA em 7 benchmarks. Ambos usam baixa resolução **sintética** (downsample de HR disponível).
+- FixRes (`touvron2019fixres`): discrepância de tamanho aparente treino/teste; treino em res menor
+  + fine-tune na de teste melhora acurácia.
+- Nekka et al. 2026 (`nekka2026counting`, **preprint SSRN**): em sticky traps (YST, moscas-brancas),
+  resolução máxima não é a melhor para contagem (mais clutter); F1 máximo na menor resolução.
+  Usar só como cautela, não como evidência forte.
+
+### C.3 Fusão de scores, calibração, AP pós-cascata
+- Zhou et al. 2021 (`zhou2021probabilistic`): score final = P(objeto)·P(classe|objeto); justifica
+  nossa política "score-produto". Guo et al. 2017 (`guo2017calibration`): temperature scaling.
+  Küppers et al. 2020 (`kuppers2020calibration`): calibração de detectores usando também posição/escala da caixa.
+- Não encontrei trabalho que reporte AP pós-re-rotulagem por classificador de crops em insetos.
+
+### C.4 Hierarquia / abstenção
+- Bertinetto et al. 2020 (`bertinetto2020mistakes`): losses hierárquicas reduzem a *severidade* do erro.
+  Geifman & El-Yaniv 2017 (`geifman2017selective`): classificação seletiva (risco–cobertura).
+  Mahfoud et al. 2026 (`mahfoud2026hierarchical`, preprint): prediz até o nível mais profundo com
+  confiança ≥0,6; acurácia por nível 80–99 % (5 níveis, 34 classes).
+  Open-Insect (`opensect2025`): métodos pós-hoc simples seguem sendo baseline forte em OSR.
+
+### C.5 Ruído de rótulo / ambiguidade de especialistas
+- Austen et al. 2018 (`austen2018species`, PeerJ): especialistas identificando tritões a partir de
+  fotos concordam pouco; acurácia por espécie 69–96 %, independente de experiência.
+- Northcutt et al. 2021 (`northcutt2021confident`, `northcutt2021pervasive`): confident learning;
+  ≥3,3 % de erro de rótulo em média nos test sets de 10 benchmarks. Song et al. 2022 (`song2022noisy`): survey.
+- Ling et al. 2023 (`ling2023wing`, Med. Vet. Entomol.): venação alar de Sarcophagidae/Calliphoridae/
+  Muscidae com 91,04 % (espécie) / 98,56 % (família) — mas em asas montadas de machos; em armadilhas
+  adesivas asas ficam ocultas/degradadas (Böckmann 2021, Bloco A). Não encontrei estudo de
+  acordo inter-observador para MD/MV/MC a partir de foto.
+
+### C.6 Foundation models
+- BioCLIP 2 (`gu2025bioclip2`), DINOv3 (`simeoni2025dinov3`), DINOv2 (`oquab2023dinov2`), LP-FT
+  (`kumar2022lpft`), VPT (`jia2022vpt`), LoRA (`hu2021lora`).
+- Saputra et al. 2026 (`saputra2026orchid`, preprint): fine-tune idêntico; DINOv2 > BioCLIP 2 em
+  7,1 pp de top-1 macro (gêneros de orquídeas). Montanares et al. 2026 (`montanares2026planktonzilla`,
+  preprint): BioCLIP/BioCLIP 2 fracos em plâncton (zero/few-shot) — domínio fora da distribuição.
+
+### C.7 Protocolo de avaliação
+- TIDE (`bolya2020tide`, ECCV 2020): dAP por Cls/Loc/Both/Dupe/Bkg/Miss + FP/FN; Hoiem et al. 2012
+  (`hoiem2012diagnosing`): precursor. Aplicar aos dois sistemas (single vs cascata).
+
+### Frases de posicionamento sugeridas (para o writer)
+- Intro/Related: "Detector-then-classifier pipelines are standard for camera-trap fauna and moths
+  \cite{beery2019,korsch2023moth,jain2024}, but are typically compared against whole-image classifiers
+  \cite{vyskocil2024camera}, not against a species-aware single-stage detector."
+- Discussion (oráculo): "As in \cite{korsch2023moth}, we report classifier accuracy on ground-truth crops as
+  an upper bound; our cascade is within 0.5 pp of it, locating the bottleneck in identification."
+- Discussion (rótulos): "Expert agreement from images alone is limited even for trained observers
+  \cite{austen2018species}; label ambiguity may bound MD/MV/MC accuracy."

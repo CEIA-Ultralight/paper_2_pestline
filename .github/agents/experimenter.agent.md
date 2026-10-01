@@ -1,5 +1,6 @@
 ---
 name: experimenter
+model: ['Claude Sonnet 5.5 (copilot)', 'Claude Sonnet 5 (copilot)']
 description: "Implementador dos experimentos do paper_2_pestline. Use para: escrever ou corrigir scripts em rq1_data/, rq2_cascade/, rq3_tiny_object/ e common/ sobre as interfaces do baseline fly_det (trainer, sahi_inference, model_backend, augment), corrigir bugs (ex.: seed no train_nwd.py), criar testes CPU em tests/, adaptar patches do Ultralytics. Não roda GPU, não submete Slurm, não edita o manuscrito."
 argument-hint: "Ex.: 'corrija o bug de seed em rq3_tiny_object/train_nwd.py e cubra com teste', 'crie common/stats.py com média±std e McNemar'"
 tools: [read, search, edit, execute]
