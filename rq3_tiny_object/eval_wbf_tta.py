@@ -114,7 +114,8 @@ def evaluate(pred_per_img, gt_per_img, n_classes, iou_thr=0.5):
         tp, fp = np.zeros(len(preds)), np.zeros(len(preds))
         matched = {img_id: np.zeros(len([b for b, l in gt_per_img[img_id] if l == c])) for img_id in gt_per_img}
         for k, (s, img_id, b) in enumerate(preds):
-            gt_c = [(i, bb) for i, (bb, l) in enumerate(gt_per_img.get(img_id, [])) if l == c]
+            # i indexa gt da CLASSE c (mesmo layout de `matched`), nao a lista completa da imagem
+            gt_c = list(enumerate(bb for bb, l in gt_per_img.get(img_id, []) if l == c))
             best_iou, best_i = 0.0, -1
             for i, bb in gt_c:
                 v = _iou(b, bb)
