@@ -3,6 +3,7 @@
 > **Regra:** todo número que aparece em `manuscript/sec/*.tex` tem que existir aqui, com origem (job/arquivo/protocolo) **e** em um CSV de `rq*/results/` (ver §8).
 > Revisores (R1–R5) comparam o paper contra este arquivo; divergência = weakness grave.
 > Atualizar **este arquivo primeiro**, depois o `.tex`. Marcar claramente `single-seed` vs `multi-seed` e `VAL` vs `TEST`.
+> **⚠️ 2026-09-30 (analyst): a campanha B200 multi-seed (§9) SUPERA os números single-seed H100 de §1–§4, que ficam apenas como histórico (vários claims foram contradidos — ver §9.3).**
 > Datas no formato do cluster (2026). Alvo: VISAPP 2027 (deadline 22/out/2026); o cabeçalho anterior ("CVPR 2027", `paper/cvpr2027/`) era legado.
 >
 > **Auditoria 2026-09-26 (analyst):** todos os números de §2–§4 foram re-derivados do W&B (`pestline/fly-species`, runs `EVAL_E0_cascade_val_20260909T134157Z` e `test-campaign-036ef018`) e batem com os `.md` a ≤0,05 p.p. (exceções de arredondamento listadas em §8). Os números de §1 marcados `results.csv` **não são verificáveis neste nó** (`/raid/user_marcospaulo/fly-det` e `flydet_runs` ausentes em dgx-B200-1); o que existe no W&B é o *summary* (validação final do `best.pt`), que é outro protocolo — ver tabela 1b.
@@ -153,3 +154,96 @@ Origem verificada: mesmo run W&B `test-campaign-036ef018` → `rq3_tiny_object/r
 
 Divergências de arredondamento CSV × texto acima (não alteradas): F1 partes 75,35 → "75,3"; ensemble F1 76,45 → "76,4"; ms/img 24,92 → "25", 462,74 → "463"; "4.197" vs `4197`. Nenhuma outra divergência > 0,05 p.p.
 Ausentes do W&B e **não rastreáveis neste nó**: `results.csv` best-epoch/`best.pt` (§1/1b), cobertura 94,91/97,89 %, contagem de 4.197 propostas, "E12 early stop ép. 10", tamanho de objetos 44,4/39,2 px, contagens do §0 (1.259 imgs / 59.346 boxes), tudo do §5 (PACBB).
+
+## 9. Campanha B200 (2026-09-26/27) — multi-seed; **supera** os números single-seed H100 de §1–§4 (mantidos como histórico)
+
+**Setup.** dgx-B200-1 (partição b200n1), torch 2.8.0+cu128, ultralytics 8.4.142, `flydet-train-b200.sif`, FP32 no eval. Dataset DS-F2_v8.1.1; índices 0–3 = MD, MV, MC, MF (conferido no `data.yaml`). Suporte conferido nos `per_instance.csv`: **VAL 35 imgs / 617 GT de espécie** (MD 142, MV 110, MC 93, MF 272); **TEST 55 imgs / 918** (MD 210, MV 214, MC 218, MF 276; as espécies estão em 51 das 55 imgs) — sem divergência. Seeds: detectores 0/1/2 (`args.yaml` e `nwd_config.json` confirmam seed efetiva = declarada; métricas distintas entre seeds, ao contrário da cadeia 33015); classificadores 42/84/126. Commit: cadeia A (33321) submetida em 9297f13+infra (`runs.md`); cadeias C/D (33363/33364) em 47ea2c7. Média ± desvio amostral (ddof=1); **diferença < std ⇒ sem efeito**. `best.pt` e `best epoch` dos detectores e dos classificadores foram escolhidos no VAL ⇒ **VAL não é held-out**; TEST é "consolidado" (já consultado em campanhas anteriores), não cego. Nenhuma escolha de modelo foi feita olhando o TEST.
+
+**Protocolos (nunca misturar numa tabela):** **P1** Ultralytics `results.csv` (VAL, best epoch = máx. fitness 0,1·mAP50+0,9·mAP50:95); **P2** harness `eval_cascade_matrix` (conf ≥ 0,25, IoU ≥ 0,5, matching class-agnóstico; P/R/F1 de MD/MV/MC/MF; "micro" = soma de TP/predições das 4 espécies; "macro" = média das 4; acc\|loc = corretos/localizados); **P3** avaliador `fly_det.sahi_inference` (7 classes, conf 0,0); **P4** `ap_per_class` recalculado pelo analista de `per_image_preds.jsonl` (mesmo código de `eval_yolo_cascade.metrics`); **P5** Ultralytics val no TEST de `eval_wbf_tta.py` (pendente de validação).
+
+### 9.1 RQ3 — detectores (3 seeds por variante; E0 vs E10 vs GCD vs P2)
+
+Fonte: `rq3_tiny_object/results/tiny_variants_multiseed.csv` (e subconjunto `nwd_3x3.csv` = E0 + E10); runs `E0_s{0,1,2}`, `E10_nwd_w0.5_s{0,1,2}` (job 33321), `E11_gcd_w0.5_s{0,1,2}`, `E1_p2_s{0,1,2}` (job 33363) em `/raid/user_marcospaulo/flydet_runs/<run>/` (`runs/*/results.csv`, `test_eval/<run>/single/label_only/{metrics.json,per_instance.csv}`). **multi-seed (n=3)**.
+
+| Variante | VAL mAP50 (P1) | VAL mAP50:95 (P1) | TEST macro-F1 (P2) | TEST micro R / P / F1 | TEST acc\|loc |
+|---|---:|---:|---:|---|---:|
+| E0 baseline | 86,1 ± 0,3 | 62,9 ± 0,1 | 72,4 ± 2,9 | 75,4±2,3 / 70,1±3,7 / 72,6±2,9 | 77,0 ± 2,6 |
+| E10 NWD w=0,5 | 86,1 ± 0,4 | 62,0 ± 0,4 | 73,1 ± 1,4 | 75,7±1,8 / 71,5±1,0 / 73,6±1,4 | 76,9 ± 1,5 |
+| E11 GCD w=0,5 | 85,6 ± 0,4 | 62,0 ± 0,6 | 70,2 ± 2,2 | 71,9±1,5 / 69,4±3,0 / 70,6±2,0 | 73,5 ± 1,6 |
+| E1 P2 | 86,3 ± 1,4 | 62,1 ± 0,3 | 71,2 ± 0,9 | 75,2±1,4 / 68,3±0,3 / 71,6±0,8 | 76,8 ± 1,4 |
+
+Δ vs E0 (média ± std dos 3 deltas por seed, p.p.): **E10** macro-F1 +0,8 ± 1,5, micro-F1 +0,9 ± 1,7, VAL mAP50 **−0,03 ± 0,12**, mAP50:95 −0,9 ± 0,5 → **sem efeito** (McNemar exato por seed, acerto de espécie: p = 0,63 / 0,63 / 0,057). **GCD** macro-F1 **−2,2 ± 0,6** (3/3 seeds negativas; McNemar p = 0,0008 / 5·10⁻⁶ / 0,29), VAL mAP50 −0,5 ± 0,1 → **piora** (único delta de TEST com |média| > std). **P2** macro-F1 −1,2 ± 1,9, VAL mAP50 +0,2 ± 1,3 → **sem efeito/inconclusivo**. No VAL mAP50:95 as três variantes ficam ≈0,9 p.p. abaixo do E0 (E10 −0,9 ± 0,5; GCD −0,9 ± 0,8; P2 −0,9 ± 0,3; std do E0 = 0,1) → nenhuma variante melhora o mAP50:95 do VAL. Controle de ruído (`tiny_variants_paired_tests.csv`): mesma config, seeds diferentes, McNemar p = 0,006 (E0 s0×s1), 0,0006 (E0 s1×s2), 0,006 (E10 s0×s1) → **a variância entre seeds do detector é detectável pelo próprio teste**; comparações single-seed (§1) não são evidência. A seed 1 do E0 (macro-F1 75,5) é a melhor de todas as 12 runs.
+
+Por espécie (TEST, recall/precisão %, média das 3 seeds; std do recall 3–8 p.p., ver CSV): E0 MD 59,2/70,7 · MV 82,2/55,5 · MC 79,5/80,1 · MF 79,2/79,5; E10 MD 60,5/73,9 · MV 79,8/58,8 · MC 81,3/77,6 · MF 79,8/78,1.
+
+**Ablações single-seed (s0)** — `tiny_ablation_single_seed.csv` (VAL: P1; TEST: P2). Ruído de referência = max(std macro-F1 E0, E10) = 2,9 p.p. **single-seed ⇒ exploratório.**
+
+| Run (s0) | VAL mAP50 / mAP50:95 | TEST macro-F1 | R / P micro | Δ macro-F1 vs E0_s0 / vs E10_s0 | McNemar exato vs E0_s0 |
+|---|---|---:|---|---|---|
+| E0_s0 (ref.) | 86,5 / 62,8 | 70,0 | 74,6 / 66,4 | — | — |
+| E10_s0 (NWD both, ref.) | 86,5 / 62,2 | 71,8 | 73,9 / 70,4 | +1,9 / — | p = 0,63 |
+| NWD só loss | 85,4 / 62,6 | 73,0 | 74,1 / 72,3 | +3,0 / +1,2 | b=64, c=59, p = 0,72 (Δacc −0,5; IC95 −4,3…+4,2) |
+| NWD só assigner | 86,2 / 62,9 | 69,7 | 71,6 / 68,4 | −0,3 / −2,2 | b=75, c=47, p = 0,014 (Δacc −3,1) |
+| NWD + RFLA | 84,5 / **57,8** | 67,4 | 70,3 / 65,0 | −2,6 / −4,4 | b=102, c=62, p = 0,0022 (Δacc −4,4; IC95 −9,1…+0,9) |
+
+Leitura: **RFLA piora** (VAL mAP50:95 −5,0 p.p. ≫ std de seeds 0,1–0,4; recall TEST −4,4). NWD só-loss: F1 +3,0 vem de precisão (+5,9) com recall estável (−0,5) e ≈1σ de ruído, e E0_s0 é a pior seed do E0 → **inconclusivo** (precisa de 3 seeds). Assigner-only ≈ E0/E10 em F1, recall −3,1 → sem benefício.
+
+**Recall de espécie por tamanho** (TEST; `recall_by_size.csv`; bins √(w·h) em px: <32 [n=451], 32–48 [n=295], ≥48 [n=172]; fronteira 48 pertence ao último bin; média ± std de 3 seeds): E0 72,1±3,6 / 73,6±2,1 / 87,2±2,5; E10 73,2±4,6 / 72,5±2,6 / 88,0±0,9 (Δ vs E0 +1,0±6,4 / −1,0±4,1 / +0,8±2,9 → **sem efeito em nenhum bin**); GCD 65,8±2,7 / 72,5±1,8 / 86,8±4,7 (Δ <32: −6,4±5,5); P2 72,1±1,8 / 72,0±2,0 / 89,1±1,9. **Recall de detecção** (class-agnóstico) E0: 96,2 / 99,4 / 99,6 % → o gargalo dos objetos pequenos é **identificar a espécie** (72 % em <32 px), não localizar (96 %).
+
+**SAHI** (`sahi_multiseed.csv`; runs `sahi_E0_s{0,1,2}`, job 33363, TEST, P3, tile 512, overlap 0,25, imgsz 512, **n=3**): sliced mAP50 59,2 ± 0,9, mAP50:95 40,0 ± 0,8 (7 classes); recall de espécie (conf 0,0) micro 77,7 ± 2,6 %. O "plain" do mesmo avaliador inferiu o frame 1920×1080 a imgsz 512 (redução ≈3,75×): mAP50 2,9 ± 0,4, recall de espécie 1,3 % → **baseline degenerado, não é o E0@1920**; o avaliador P3 (conf 0,0) **não é comparável** ao harness P2 (E0 R = 75,4 % a conf 0,25). **Veredito: inconclusivo** — não há comparação SAHI × E0@1920 no mesmo protocolo; a única evidência (§4: F1 66,2 vs 73,2, H100, single-seed, harness) segue como histórico. Pendência: rodar plain@1920 e SAHI com exportação de predições para o harness P2.
+
+**TTA/WBF:** `ttawbf_E0_s{0,1,2}` (vanilla/TTA, P5) → `tta_vanilla_multiseed_PENDENTE_validacao.csv` — **pendente de validação (possível bug de indexação); NÃO usar como fato.** `ttawbf_E0_ensemble` (WBF) e `E7_yolo26l_s0`: **não rodaram** (job 33363 abortou no ensemble: `IndexError`).
+
+### 9.2 RQ2 — cascata (job 33364; 6 detectores × 6 classificadores; **9 pares = 3 det × 3 clf cruzados, não independentes**)
+
+Fonte: `rq2_cascade/results/cascade_test_seeds.csv`, `cascade_val_seeds.csv`, `mcnemar.csv`, `policy_comparison.csv`, `ap_per_class.csv`; runs `cascade_cross_{test,val}/<det>/<clf>/<policy>/` (`metrics.json`, `per_instance.csv`, `per_image_preds.jsonl`). Classificadores: ConvNeXt-T 384 CE (`clf_convnext_t_ce_s{42,84,126}`) e partes (`…parts_s{42,84,126}`), job 33322. Política principal **label_only**.
+
+**TEST, E0 × CE, label_only (P2; single = 3 detectores; cascata = 9 pares; Δ = cascata − single do mesmo detector):**
+
+| | micro R | micro P | micro F1 | macro-F1 | acc\|loc |
+|---|---:|---:|---:|---:|---:|
+| single (n=3) | 75,4 ± 2,3 | 70,1 ± 3,7 | 72,6 ± 2,9 | 72,4 ± 2,9 | 77,0 ± 2,6 |
+| cascata CE (n=9) | 78,5 ± 0,3 | 67,8 ± 2,5 | 72,7 ± 1,4 | 72,5 ± 1,5 | 80,1 ± 0,3 |
+| **Δ (n=9)** | **+3,0 ± 2,2** | −2,2 ± 2,6 | +0,1 ± 2,2 | +0,1 ± 2,1 | +3,1 ± 2,2 |
+
+E0 × partes: Δ R +3,3 ± 2,4, P −0,4 ± 2,8, F1 +1,2 ± 2,1 (macro-F1 73,8 ± 1,5). E10 × CE: Δ R +3,4 ± 1,2, P −3,7 ± 1,9, F1 −0,5 ± 1,3; E10 × partes: R +3,4 ± 1,8, P −2,3 ± 2,1, F1 +0,3 ± 1,2. **Só o recall (= acerto de espécie) sobe; F1 não muda (|Δ| < std em todas as 4 combinações); precisão cai ou fica igual.** Partes ≈ CE (macro-F1 73,8 vs 72,5, Δ < std; oráculo 79,7 vs 79,6) — confirma §3.
+
+**McNemar exato (acerto de espécie, por GT, 918) + IC95 bootstrap por imagem (10 000 reamostragens de imagens, seed 20260930):** E0 × CE (9 pares): **6/9 significativos a 0,05 (todos a favor da cascata)**, 6/9 com Holm (família de 9), **3/9 com Holm sobre os 36 pares**; IC95 do bootstrap exclui 0 em 4/9. Os 3 pares não significativos são exatamente os 3 do detector E0_s1 (Δacc −0,1 … +0,4; p ≥ 0,79), cujo single já tem acc\|loc 80,0 %; E0_s0: Δacc +3,8…+4,1 (b=57–61, c=93–96, p ≤ 0,0065); E0_s2: +4,6…+5,4 (p ≤ 0,0012). E0 × partes 5/9 (Holm 4); E10 × CE 5/9 (Holm 4); E10 × partes 5/9 (Holm 5). O McNemar trata as 918 GT como independentes e subestima a incerteza (GT agrupados em 51 imagens); o IC por imagem é o mais conservador.
+
+**VAL inverte o sinal (P2, 617 GT; `cascade_val_seeds.csv`, VAL não é held-out):** E0 × CE Δ R **−0,7 ± 0,3** (0/9 significativos, 9/9 negativos), F1 −2,7 ± 1,1; E0 × partes −2,3 ± 0,5 (F1 −3,3 ± 1,4); E10 × CE +0,0 ± 0,8 (F1 −3,2 ± 1,0); E10 × partes −1,7 ± 0,5. **Contradiz o ganho VAL de §2 (+4,2 p.p., H100, single-seed)**. Mecanismo medido: acc\|loc da cascata ≈ acerto do classificador sobre crop GT, **independente do detector** (std entre 9 pares 0,3 p.p. vs 2,6 do single) → a cascata substitui a identificação do detector pela do classificador e só ajuda quando o classificador é melhor que o detector (TEST: oráculo 79,6 vs single 77,0; VAL: oráculo 84,6 vs single 86,8).
+
+**Por espécie, TEST, E0 × CE label_only (R / P %; single → cascata):** MD 59,2/70,7 → 59,6/69,1; MV 82,2/55,5 → 87,7/55,8; MC 79,5/80,1 → 81,5/82,4; MF 79,2/79,5 → 83,2/**70,4** (precisão −9,2 ± 2,2: o classificador não tem classe de fundo e re-rotula como espécie as propostas FP de NOISE/INS/MAR).
+
+**Confusão (TEST, E0 × CE label_only; `confusion_single_vs_cascade.csv`; % do suporte da classe; single n=3 → cascata n=9, Δ ± std):** MD→MV 31,3 → 30,4 (−0,9 ± 5,0); MC→MV 15,4 → 15,6 (+0,1 ± 7,3); MV→MC 7,3 → 6,3 (−1,0 ± 2,2); **MF→MC 0,0 e MC→MF 0,0 em ambos**; MF→{INS,NOISE,MAR} 15,5 → 11,6 (−3,8 ± 4,6). Erros dominantes (MD→MV, MC→MV) **não mudam com a cascata**; a confusão MF↔"MC" (análoga à MF↔BF do PACBB, §5) **não ocorre** neste dataset — o erro de MF é para classes não-espécie.
+
+**Oráculo (classificador sobre crops das caixas GT; `oracle_crops.csv`, jobs 33364/33322):** acc de espécie TEST CE **79,6 ± 0,5** (macro-F1 81,8 ± 0,4; recall MD 61,1 · MV 87,7 · MC 82,3 · MF 85,1), partes 79,7 ± 1,8 (82,6 ± 1,3); VAL CE 84,6 ± 0,4, partes 83,4 ± 0,4 (VAL não é held-out). Precisão do oráculo só sobre crops GT (sem FP de detecção) — não comparável à precisão do pipeline.
+
+**Decomposição do erro de espécie (TEST, E0; % dos 918 GT):** erro de **localização** (GT sem proposta conf ≥ 0,25/IoU ≥ 0,5) **2,1 ± 0,4** (E10: 1,5 ± 0,4); erro de **identificação** (localizado e espécie errada) **22,5 ± 2,7** no single → **19,4 ± 0,3** na cascata CE. Cascata acc\|loc 80,1 vs oráculo restrito aos localizados 79,9 (gap −0,3 ± 0,5 p.p.): **a cascata atinge o teto do classificador; o erro restante (≈19 %) é de identificação, não de localização**. Teto do pipeline (det.recall × oráculo\|loc) = 78,2 vs acc real 78,5. VAL: loc 3,7 %, id single 12,8 → cascata 13,5 %.
+
+**Política (label_only × product).** No harness P2 as duas políticas dão **P/R/F1 idênticos por construção** (`policy_comparison.csv`: o limiar 0,25 é aplicado ao `yolo_conf`, não ao score da política) → não permite ranquear. Reavaliação do analista (limiar 0,25 no **score da política**, reproduz o `metrics.json` do label_only em 72/72 combinações, ≤ 1 GT de diferença por arredondamento do jsonl) e AP (P4): E0 × CE, TEST — label_only R 78,5 / P 67,8 / F1 72,7; **product R 77,6 / P 70,0 / F1 73,6** (Δ F1 product−label_only **+0,85 ± 0,39, 9/9 pares positivos**); AP50 de espécie (média das 4) single 73,1 ± 2,4 → label_only 66,8 ± 1,2 (−6,3) → **product 70,0 ± 0,7 (−3,1; product > label_only em 9/9 pares)**; AP50:95 54,2 / 49,8 / 52,0. Mesmo sentido no VAL (AP50 espécie 84,8 / 77,5 / 79,4). **Melhor política = product**, mas **nenhuma cascata supera o single em AP** (a cascata re-rotula sem re-ranquear — confirma §2); product vs single a limiar 0,25: R +2,2 ± 1,9, P −0,1, F1 +1,0 ± 2,0 (sem efeito). Política não foi usada para escolher classificador/detector.
+
+**Latência (B200, FP32, imgsz 1920; ms por imagem; ± entre as 18 combinações det×clf×política; `latency.csv`; TEST 55 imgs):** detector E0 11,9 ± 6,0 (E10 7,9 ± 0,4); extra do classificador CE 413 ± 182 (partes 340 ± 53) para E0; end-to-end E0×CE 425 ± 186 (std por imagem 267; p95 899), E0×partes 352 ± 58, E10×CE 347 ± 17, E10×partes 335 ± 4 → cascata ≈ 30–44× o custo do detector. A latência **varia entre jobs** (detector do E0_s0: 9,1 ms na cadeia A vs 20,1 ms na D; modelos residentes e nó compartilhado) — **indicativa**, não benchmark; depende do nº de propostas por imagem (≤ 300 crops). Não comparável com os números H100 (§2/§3).
+
+**Classificadores (VAL, crops pad75, cadeia B; `classifiers_b200_val_multiseed.csv`; n=3):** acc de espécie CE 85,4 ± 0,4 (macro-F1 83,7 ± 0,9), partes 83,5 ± 1,2 (83,6 ± 1,5); todos `early_stop` (best epoch CE 11/4/4, partes 7/1/11 — partes s84 com best epoch 1 de 6 ⇒ possivelmente sub-treinado). O oráculo VAL (crops GT em memória, 1.649 GT) difere dos crops pad75 pré-extraídos (1.645) em −1,3…+0,7 p.p.
+
+**AP por classe (`ap_per_class.csv`):** não existe nos `metrics.json` da cadeia D; foi **recalculado** pelo analista de `per_image_preds.jsonl` (propostas conf ≥ 0,001; arredondadas a 6 casas) com `EV.candidates/greedy` + `ap_per_class` do ultralytics 8.4.142 (mesmo protocolo de `eval_yolo_cascade.metrics`; 7 classes + média de espécies).
+
+### 9.3 Claims anteriores × B200 (para o orquestrador; o analista não edita o `.tex`)
+
+| Claim (onde) | B200 | Status |
+|---|---|---|
+| NWD E10 +1,4 p.p. mAP50 (§1, README RQ3) | Δ VAL mAP50 −0,03 ± 0,12; mAP50:95 −0,9 ± 0,5; TEST macro-F1 +0,8 ± 1,5 (3 seeds) | **contradiz** |
+| GCD tem o melhor mAP50:95 (§1) | VAL 62,0 ± 0,6 vs E0 62,9 ± 0,1; TEST macro-F1 −2,2 ± 0,6 | **contradiz** |
+| P2 piora (§4: F1 67,5 vs 73,2) | 71,2 ± 0,9 vs 72,4 ± 2,9 (Δ −1,2 ± 1,9) | **inconclusivo** (efeito de 5,7 p.p. era ruído/config) |
+| SAHI piora (§4: 66,2 vs 73,2) | sem baseline plain@1920 no mesmo protocolo | **inconclusivo** |
+| Cascata melhora recall e F1 (§3: +4,4 / +2,1) | TEST: R +3,0 ± 2,2 (6/9 sig.), F1 +0,1 ± 2,2; **VAL: R −0,7 ± 0,3** | recall: **confirma só no TEST**; F1: **contradiz**; VAL: **contradiz** |
+| Cascata reduz AP (§2/§3) | AP50 espécie −6,3 (label_only) / −3,1 (product) | **confirma** |
+| Partes ≈ CE (§3) | macro-F1 73,8 vs 72,5; oráculo 79,7 vs 79,6 | **confirma** |
+| Confusão MF↔outra espécie "irredutível" (PACBB, §5) | MF→MC = MC→MF = 0 %; MF→não-espécie 15,5 % | **não se aplica** a MF↔MC |
+| NWD ajuda objetos pequenos | recall <32 px Δ +1,0 ± 6,4 | **sem efeito** |
+
+### 9.4 CSVs da campanha B200 (todos com `split`, `seeds`, `n_seeds`, `source_path`, `job`; script gerador local `_scratch/b200_{lib,rq3,rq2,rq2_policy}.py`, não versionado)
+
+`rq3_tiny_object/results/`: `nwd_3x3.csv` (24), `tiny_variants_multiseed.csv` (58), `tiny_variants_paired_tests.csv` (15), `tiny_ablation_single_seed.csv` (22), `recall_by_size.csv` (66), `sahi_multiseed.csv` (12), `tta_vanilla_multiseed_PENDENTE_validacao.csv` (6, **não é fato**). `rq2_cascade/results/`: `cascade_test_seeds.csv` e `cascade_val_seeds.csv` (200 cada), `mcnemar.csv` (160), `confusion_single_vs_cascade.csv` (1.184), `oracle_crops.csv` (112, inclui decomposição), `latency.csv` (168), `classifiers_b200_val_multiseed.csv` (6), `policy_comparison.csv` (184), `ap_per_class.csv` (1.524).
+
+Ressalvas: (i) `paired_discordant` do `metrics.json` conta os 7 classes (todos os GT), não só espécies — o analista recalcula b/c só em espécies (conferido contra o `metrics.json` em 7 classes); (ii) cascata e single usam o mesmo matching por GT (pareado por construção); (iii) a latência de detector do `E0_s0` (20,1 ms na cadeia D) é atípica frente a E0_s1/s2 e E10 (≈8 ms); (iv) TEST já foi consultado em campanhas anteriores (consolidado, não cego).
