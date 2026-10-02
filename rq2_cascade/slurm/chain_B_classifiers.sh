@@ -34,6 +34,7 @@ source "${REPO}/common/slurm/b200_common.sh"
 b200_guard
 TRAIN="${REPO}/rq2_cascade/slurm/train_classifier_b200.sh"
 export WANDB_PROJECT="${WANDB_PROJECT_RQ2}"
+export WANDB_RUN_GROUP="${WANDB_RUN_GROUP:-classifiers}"
 SEEDS="${SEEDS:-42 84 126}"
 VARIANTS="${VARIANTS:-baseline parts}"
 

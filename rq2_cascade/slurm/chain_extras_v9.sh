@@ -46,6 +46,7 @@ PROP="${USER_ROOT}/datasets/DS-F2_v9.0.5_crops_proposals"
 TRAIN_DET="${REPO}/common/slurm/train_detector_b200.sh"
 TRAIN_CLF="${REPO}/rq2_cascade/slurm/train_classifier_b200.sh"
 export WANDB_PROJECT="${WANDB_PROJECT_RQ2}"
+export WANDB_RUN_GROUP="${WANDB_RUN_GROUP:-extras}"
 SEEDS_C="42 84 126"; SEEDS_D="0 1 2"
 
 # step NAME CMD... : pula se .OK; roda como etapa opcional; grava .OK ou .FAIL

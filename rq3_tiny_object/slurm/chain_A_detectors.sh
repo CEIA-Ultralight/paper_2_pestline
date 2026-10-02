@@ -35,6 +35,7 @@ source "${REPO}/common/slurm/b200_common.sh"
 b200_guard
 TRAIN="${REPO}/common/slurm/train_detector_b200.sh"
 export WANDB_PROJECT="${WANDB_PROJECT_RQ3}"
+export WANDB_RUN_GROUP="${WANDB_RUN_GROUP:-detectors}"
 SEEDS="${SEEDS:-0 1 2}"
 
 echo "CHAIN A inicio $(date) job=${SLURM_JOB_ID} seeds=${SEEDS}"

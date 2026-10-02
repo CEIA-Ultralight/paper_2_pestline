@@ -44,6 +44,7 @@ REPO="${REPO:-/raid/user_marcospaulo/paper_2_pestline}"
 source "${REPO}/common/slurm/b200_common.sh"
 b200_guard
 export WANDB_PROJECT="${WANDB_PROJECT_RQ2}"
+export WANDB_RUN_GROUP="${WANDB_RUN_GROUP:-cascade}"
 SPLITS="${SPLITS:-val test}"
 POLICIES="${POLICIES:-label_only product}"
 DET_RUNS="${DET_RUNS:-E0_s0 E0_s1 E0_s2 E10_nwd_w0.5_s0 E10_nwd_w0.5_s1 E10_nwd_w0.5_s2}"

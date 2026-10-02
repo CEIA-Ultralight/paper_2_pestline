@@ -51,8 +51,11 @@ mkdir -p "${WANDB_DIR}" "${WANDB_CACHE_DIR}" "${WANDB_CONFIG_DIR}" "${HF_HOME}" 
 if [[ -f "${SECRETS}" ]]; then set -a; source "${SECRETS}"; set +a; fi
 export WANDB_ENTITY="${WANDB_ENTITY:-pestline}"
 export WANDB_MODE="${WANDB_MODE:-online}"
-WANDB_PROJECT_RQ2="${WANDB_PROJECT_RQ2:-paper2-rq2-cascade-v9}"
-WANDB_PROJECT_RQ3="${WANDB_PROJECT_RQ3:-paper2-rq3-tiny-object-v9}"
+# Campanha oficial v9: UM projeto W&B para todos os experimentos (entity pestline); RQ2/RQ3 se distinguem por grupo/tags.
+WANDB_PROJECT_ALL="${WANDB_PROJECT_ALL:-paper2-ds-f2-v9}"
+WANDB_PROJECT_RQ2="${WANDB_PROJECT_RQ2:-${WANDB_PROJECT_ALL}}"
+WANDB_PROJECT_RQ3="${WANDB_PROJECT_RQ3:-${WANDB_PROJECT_ALL}}"
+export WANDB_TAGS="${WANDB_TAGS:-DS-F2_v9.0.5,paper2}"
 
 # PYTHONPATH dentro do container: codigo do paper (fly_det ja esta no venv do .sif)
 PY_PATH="${REPO}/rq3_tiny_object:${REPO}/rq3_tiny_object/patches:${REPO}/rq2_cascade:${REPO}/common:${USER_ROOT}/pylibs"   # pylibs (timm/open_clip) no FIM: nao sobrepoe o torch do .sif
