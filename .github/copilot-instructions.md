@@ -4,7 +4,7 @@ Repositório de **experimentos + manuscrito** do paper 2 do projeto Pestline (VI
 Leia `README.md` (tese, RQs, layout) antes de agir. Responda em **português**.
 
 ## Cluster (violação = penalidade financeira)
-- **GPU só via Slurm** (`sbatch`, partição `h100n2`, Apptainer `/raid/user_marcospaulo/containers/flydet-train.sif`). Nunca `python`/`torchrun` com GPU no login node.
+- **GPU só via Slurm** (`sbatch`, partição `b200n1`, Apptainer `/raid/user_marcospaulo/containers/flydet-train-b200.sif` (o `flydet-train.sif` cu124 não roda em Blackwell)). Nunca `python`/`torchrun` com GPU no login node.
 - **Nada na home**: datasets, checkpoints, caches (uv, HF, torch, wandb) ficam em `/raid/user_marcospaulo/`.
 - Jobs com `save_period`, `resume` e `--signal=B:SIGUSR1@300` (manutenções cancelam sem aviso).
 - **Nunca reduzir a resolução do dataset** (1920×1080). `imgsz` alto e/ou tiling são treino, não alteração do dataset.
@@ -22,7 +22,7 @@ Leia `README.md` (tese, RQs, layout) antes de agir. Responda em **português**.
 - Métricas primárias do usuário: **recall, precisão, acurácia por espécie**; mAP é secundário.
 
 ## Git
-- Trabalhar em `dev` (ou branch de tópico). **Agentes nunca fazem `git push`**; o autor humano envia.
+- Hoje tudo em `main` (não existe `dev`; o autor decide). **Agentes nunca fazem `git push`**; o autor humano envia.
 - `manuscript/` e `baseline/` são submodules: editar `.tex` dentro de `manuscript/`, commitar lá, depois `git add manuscript` aqui.
 - Arquivos temporários só dentro do workspace (`_scratch/`, ignorado).
 

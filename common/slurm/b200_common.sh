@@ -21,10 +21,10 @@
 USER_ROOT="${USER_ROOT:-/raid/user_marcospaulo}"
 REPO="${REPO:-${USER_ROOT}/paper_2_pestline}"
 IMAGE="${IMAGE:-${USER_ROOT}/containers/flydet-train-b200.sif}"
-DATA_ROOT="${DATA_ROOT:-${USER_ROOT}/datasets/DS-F2_v8.1.1}"
+DATA_ROOT="${DATA_ROOT:-${USER_ROOT}/datasets/DS-F2_v9.0.5}"
 DATA_YAML="${DATA_YAML:-${DATA_ROOT}/data.yaml}"
-CROPS="${CROPS:-${USER_ROOT}/datasets/DS-F2_crops_pad75}"   # ImageFolder train/val/test, 7 classes
-RUNS_ROOT="${RUNS_ROOT:-${USER_ROOT}/flydet_runs}"
+CROPS="${CROPS:-${USER_ROOT}/datasets/DS-F2_v9.0.5_crops_pad75}"   # ImageFolder train/val/test, 7 classes
+RUNS_ROOT="${RUNS_ROOT:-${USER_ROOT}/flydet_runs_v9}"
 LOGS="${LOGS:-${USER_ROOT}/slurm_logs}"
 SECRETS="${SECRETS:-${USER_ROOT}/secrets/wandb.env}"
 MODELS_DIR="${MODELS_DIR:-${USER_ROOT}/models}"
@@ -51,8 +51,8 @@ mkdir -p "${WANDB_DIR}" "${WANDB_CACHE_DIR}" "${WANDB_CONFIG_DIR}" "${HF_HOME}" 
 if [[ -f "${SECRETS}" ]]; then set -a; source "${SECRETS}"; set +a; fi
 export WANDB_ENTITY="${WANDB_ENTITY:-pestline}"
 export WANDB_MODE="${WANDB_MODE:-online}"
-WANDB_PROJECT_RQ2="${WANDB_PROJECT_RQ2:-paper2-rq2-cascade}"
-WANDB_PROJECT_RQ3="${WANDB_PROJECT_RQ3:-paper2-rq3-tiny-object}"
+WANDB_PROJECT_RQ2="${WANDB_PROJECT_RQ2:-paper2-rq2-cascade-v9}"
+WANDB_PROJECT_RQ3="${WANDB_PROJECT_RQ3:-paper2-rq3-tiny-object-v9}"
 
 # PYTHONPATH dentro do container: codigo do paper (fly_det ja esta no venv do .sif)
 PY_PATH="${REPO}/rq3_tiny_object:${REPO}/rq3_tiny_object/patches:${REPO}/rq2_cascade:${REPO}/common"

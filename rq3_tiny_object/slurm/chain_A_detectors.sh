@@ -46,12 +46,18 @@ for s in ${SEEDS}; do
         WANDB_RUN_NAME="${RUN}" bash "${TRAIN}"
 done
 
-for s in ${SEEDS}; do
+# RUN_E10=0 pula o NWD (campanha v9 da RQ2 nao o usa); RUN_E7=1 adiciona yolo26l seed 0.
+for s in $([[ "${RUN_E10:-1}" == 1 ]] && echo "${SEEDS}"); do
     RUN=E10_nwd_w0.5_s${s}
     if step_done "${RUNS_ROOT}/${RUN}/DONE"; then echo "SKIP ${RUN}"; continue; fi
     chain_run env RUN_NAME="${RUN}" FLYDET_SEED="${s}" FLYDET_NWD_MODE=nwd FLYDET_NWD_W=0.5 \
         FLYDET_NWD_C=44.0 FLYDET_NWD_SCOPE=both FLYDET_RFLA=0 WANDB_RUN_NAME="${RUN}" bash "${TRAIN}"
 done
+
+if [[ "${RUN_E7:-0}" == 1 ]] && ! step_done "${RUNS_ROOT}/E7_yolo26l_s0/DONE"; then
+    chain_run env RUN_NAME=E7_yolo26l_s0 FLYDET_SEED=0 FLYDET_NWD_MODE=off FLYDET_RFLA=0 MODEL=yolo26l.pt \
+        WANDB_RUN_NAME=E7_yolo26l_s0 bash "${TRAIN}"
+fi
 
 touch "${RUNS_ROOT}/CHAIN_A_DONE"
 echo "CHAIN_A_DONE $(date)"
