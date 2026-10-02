@@ -127,12 +127,20 @@ _chain_exit75() {
 chain_run() {
     echo ""
     echo "########## $(date '+%F %T') — $* ##########"
-    "$@" &
-    CHAIN_CHILD=$!
-    local rc=0
-    wait "${CHAIN_CHILD}" || rc=$?
-    if [[ "${CHAIN_INTERRUPTED}" == 1 ]]; then wait "${CHAIN_CHILD}" 2>/dev/null || true; echo "CHAIN_INTERRUPTED sinal=${CHAIN_SIGNAL} rc=75"; _chain_exit75; fi
-    CHAIN_CHILD=''
+    local attempt=1 rc=0
+    while :; do
+        "$@" &
+        CHAIN_CHILD=$!
+        rc=0
+        wait "${CHAIN_CHILD}" || rc=$?
+        if [[ "${CHAIN_INTERRUPTED}" == 1 ]]; then wait "${CHAIN_CHILD}" 2>/dev/null || true; echo "CHAIN_INTERRUPTED sinal=${CHAIN_SIGNAL} rc=75"; _chain_exit75; fi
+        CHAIN_CHILD=''
+        # rc 255 = falha transitoria do apptainer/nó (ex.: "unknown userid" do NSS); etapas sao idempotentes -> repetir
+        if [[ "${rc}" == 255 && "${attempt}" -lt "${B200_RETRIES:-3}" ]]; then
+            echo "CHAIN_RETRY rc=255 tentativa ${attempt}/${B200_RETRIES:-3} em 60 s — $*"; attempt=$((attempt+1)); sleep 60; continue
+        fi
+        break
+    done
     if [[ "${rc}" == 75 ]]; then echo "CHAIN_STEP_PREEMPTED rc=75 — ressubmeter"; _chain_exit75; fi
     if [[ "${rc}" != 0 ]]; then echo "CHAIN_ABORT: etapa falhou rc=${rc} — $*"; exit "${rc}"; fi
 }
