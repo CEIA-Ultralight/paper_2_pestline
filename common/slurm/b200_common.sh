@@ -55,7 +55,7 @@ WANDB_PROJECT_RQ2="${WANDB_PROJECT_RQ2:-paper2-rq2-cascade-v9}"
 WANDB_PROJECT_RQ3="${WANDB_PROJECT_RQ3:-paper2-rq3-tiny-object-v9}"
 
 # PYTHONPATH dentro do container: codigo do paper (fly_det ja esta no venv do .sif)
-PY_PATH="${REPO}/rq3_tiny_object:${REPO}/rq3_tiny_object/patches:${REPO}/rq2_cascade:${REPO}/common"
+PY_PATH="${REPO}/rq3_tiny_object:${REPO}/rq3_tiny_object/patches:${REPO}/rq2_cascade:${REPO}/common:${USER_ROOT}/pylibs"   # pylibs (timm/open_clip) no FIM: nao sobrepoe o torch do .sif
 
 b200_guard() {
     : "${SLURM_JOB_ID:?Requer sbatch (GPU so via Slurm)}"
@@ -124,7 +124,8 @@ _chain_exit75() {
     exit 75
 }
 
-chain_run() {
+# _chain_exec CMD... -> executa a etapa (com retry em rc 255 e tratamento de sinal); rc final em CHAIN_RC.
+_chain_exec() {
     echo ""
     echo "########## $(date '+%F %T') — $* ##########"
     local attempt=1 rc=0
@@ -142,7 +143,20 @@ chain_run() {
         break
     done
     if [[ "${rc}" == 75 ]]; then echo "CHAIN_STEP_PREEMPTED rc=75 — ressubmeter"; _chain_exit75; fi
-    if [[ "${rc}" != 0 ]]; then echo "CHAIN_ABORT: etapa falhou rc=${rc} — $*"; exit "${rc}"; fi
+    CHAIN_RC="${rc}"
+}
+
+# chain_run: etapa obrigatoria (falha aborta a cadeia).
+chain_run() {
+    _chain_exec "$@"
+    if [[ "${CHAIN_RC}" != 0 ]]; then echo "CHAIN_ABORT: etapa falhou rc=${CHAIN_RC} — $*"; exit "${CHAIN_RC}"; fi
+}
+
+# chain_try: etapa opcional (falha e registrada e a cadeia continua); retorna o rc da etapa.
+chain_try() {
+    _chain_exec "$@"
+    if [[ "${CHAIN_RC}" != 0 ]]; then echo "CHAIN_TRY_FAILED rc=${CHAIN_RC} — $*"; fi
+    return 0
 }
 
 step_done() { [[ -f "$1" ]]; }

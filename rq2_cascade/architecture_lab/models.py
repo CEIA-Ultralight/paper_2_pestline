@@ -23,7 +23,7 @@ __all__ = ["build_model", "arcface_logits", "supcon_loss", "attention_diversity"
 
 _VARIANTS = frozenset({
     "baseline", "supcon", "arcface", "parts", "hires",
-    "parts_supcon", "hires_supcon", "hires_parts", "dinov2",
+    "parts_supcon", "hires_supcon", "hires_parts", "dinov2", "dinov3", "bioclip2",
 })
 _EMBEDDING_DIM = 128
 
@@ -477,4 +477,7 @@ def build_model(
         raise ValueError("num_classes must be a positive integer")
     if variant == "dinov2":
         return _DinoV2Model(num_classes, pretrained)
+    if variant in ("dinov3", "bioclip2"):
+        from .foundation import _Foundation
+        return _Foundation(variant, num_classes, pretrained)
     return _ArchitectureModel(variant, num_classes, pretrained)

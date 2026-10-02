@@ -429,8 +429,10 @@ def run(args) -> int:
                   f"{det_name}/single/label_only", wandb_run)
             # Estagio 2: cada classificador sobre as MESMAS propostas.
             for clf_name, (model, transform, order) in heads.items():
+                _sz = transform.transforms[0].size
+                _sz = (_sz, _sz) if isinstance(_sz, int) else tuple(_sz)
                 for _ in range(2):
-                    model(torch.zeros((1, 3, 384, 384), device="cuda"))["logits"]
+                    model(torch.zeros((1, 3, *_sz), device="cuda"))["logits"]
                 recs = []
                 for r in base:
                     cascade, clf_s = EV.timed(

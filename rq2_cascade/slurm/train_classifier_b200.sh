@@ -61,6 +61,8 @@ else
     EXTRA+=(--wandb --wandb-entity "${WANDB_ENTITY}" --wandb-project "${WANDB_PROJECT}" --wandb-run-name "${WANDB_RUN_NAME}")
 fi
 
+[[ "${WITH_BG:-0}" == 1 ]] && EXTRA+=(--with-background)   # 8a classe BG (crops de propostas)
+export FLYDET_DINOV2_CHECKPOINT="${FLYDET_DINOV2_CHECKPOINT:-${MODELS_DIR}/dinov2/dinov2_vitb14_pretrain.pth}"
 echo "============================== ${RUN_NAME} =============================="
 echo "Job: ${SLURM_JOB_ID} @ ${SLURM_NODELIST:-?}  variant=${VARIANT} seed=${SEED}"
 echo "epochs=${EPOCHS} patience=${PATIENCE} batch=${BATCH} img=${IMG} lr=${LR} max_hours=${MAX_HOURS}"

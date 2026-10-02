@@ -99,3 +99,6 @@ Memória compartilhada: `rq*/README.md` (backlog), `rq*/results/runs.md`, `docs/
 - Multi-seed (≥3) e teste pareado (McNemar) para qualquer claim comparativo. Marcar sempre `VAL` vs `TEST` e
   `single-seed` vs `multi-seed`.
 - Citar o paper anterior em 3ª pessoa; nunca "our previous work" / "same industrial partner" (double-blind).
+
+## Autoria
+Todo o código, os experimentos e o texto deste repositório são de autoria do(s) autor(es) do paper. Commits e documentos não trazem atribuição a ferramentas de IA; qualquer divulgação de uso de ferramentas exigida pelo veículo (VISAPP/INSTICC) é decisão e responsabilidade do autor.

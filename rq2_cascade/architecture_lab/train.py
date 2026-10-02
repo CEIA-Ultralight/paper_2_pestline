@@ -54,7 +54,7 @@ def classes_for(args):
 RAID = Path("/raid/user_marcospaulo")
 SCHEMA_VERSION = 1
 VARIANTS = ("baseline", "supcon", "arcface", "parts", "hires",
-            "parts_supcon", "hires_supcon", "hires_parts", "dinov2")
+            "parts_supcon", "hires_supcon", "hires_parts", "dinov2", "dinov3", "bioclip2")
 SUPCON_VARIANTS = ("supcon", "parts_supcon", "hires_supcon")
 PARTS_VARIANTS = ("parts", "parts_supcon", "hires_parts")
 

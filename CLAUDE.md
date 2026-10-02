@@ -25,7 +25,7 @@ Violação = bloqueio automático de acesso + penalidade financeira.
 ## Comandos
 - Testes (CPU): `_scratch/venv_tests/bin/python -m pytest tests -q` (referência: 125 passed, 25 skipped).
 - LaTeX: `cd manuscript && TECTONIC_CACHE_DIR=../_scratch/tectonic_cache tectonic -X compile main.tex --outdir _build`.
-- Container/dataset/modelos/saídas: ver tabela em `docs/HANDOFF_CURSOR.md` §2 (`RUNS_ROOT=/raid/user_marcospaulo/flydet_runs/`).
+- Container/dataset/modelos/saídas: ver tabela em `docs/HANDOFF_CURSOR.md` §2 (campanha oficial v9: `DATA_ROOT=.../datasets/DS-F2_v9.0.5`, `RUNS_ROOT=/raid/user_marcospaulo/flydet_runs_v9/`, W&B `paper2-rq*-v9`).
 
 ## Convenções não óbvias
 - **Cadeia de custódia:** nenhum número vai para `manuscript/` sem CSV em `*/results/` e linha em `docs/PAPER_FACTS.md`. Marcar `VAL` vs `TEST` e `single-seed` vs `multi-seed`. VAL foi usada para escolher `best.pt` → não é held-out.
@@ -40,3 +40,4 @@ Violação = bloqueio automático de acesso + penalidade financeira.
 - `manuscript/` e `baseline/` são submodules: commitar dentro de `manuscript/`, depois `git add manuscript` na raiz.
 - Commits: o projeto autoriza um commit local por etapa concluída do fluxo; fora disso, só quando o autor pedir (isso prevalece sobre a regra global).
 - Não apagar arquivos do autor sem pedir. Analyst: geradores de CSV ficam em `common/analysis/` (rastreados), não em `_scratch/`.
+- **Autoria:** commits, PRs e documentos são do autor. Não incluir `Co-Authored-By`, "Generated with" nem qualquer menção a IA/Claude em mensagens de commit, README ou código (instrução do autor, 2026-10-02; vale mais que a atribuição padrão da ferramenta).
