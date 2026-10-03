@@ -57,7 +57,7 @@ if ! { step_done "${RUNS_ROOT}/CHAIN_A_DONE" && step_done "${RUNS_ROOT}/CHAIN_B_
     fi
     echo "faixa detectores rc=${RC_A}; faixa classificadores rc=${RC_B}"
     if [[ "${RC_A}" == 75 || "${RC_B}" == 75 || "${CHAIN_INTERRUPTED:-0}" == 1 ]]; then _chain_exit75; fi
-    [[ "${RC_A}" == 0 && "${RC_B}" == 0 ]] || { echo "CORE ABORT rcA=${RC_A} rcB=${RC_B}"; exit 1; }
+    [[ "${RC_A}" == 0 && "${RC_B}" == 0 ]] || { echo "CORE ABORT rcA=${RC_A} rcB=${RC_B}"; _alert "ERROR core abort rcA=${RC_A} rcB=${RC_B}"; exit 1; }
 fi
 PID_A=''; PID_B=''
 

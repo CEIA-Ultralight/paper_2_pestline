@@ -74,7 +74,18 @@ b200_guard() {
 # Variaveis FLYDET_*/WANDB_* exportadas no host sao propagadas via --env.
 # Segredos (WANDB_API_KEY etc.) NAO vao em --env (apareceriam em `ps`); o apptainer
 # ja herda o ambiente do host, entao a chave chega ao container mesmo assim.
+# Espera o NSS do nó resolver o uid (falha transitória "unknown userid" do apptainer; observada em 3 jobs). Máx. 30 min.
+_wait_nss() {
+    local t=0
+    until getent passwd "$(id -u)" >/dev/null 2>&1; do
+        (( t == 0 )) && _alert "WARN nss: uid $(id -u) nao resolve em $(hostname); aguardando"
+        (( t >= 1800 )) && { _alert "ERROR nss indisponivel por 30 min em $(hostname)"; break; }
+        sleep 10; t=$((t+10))
+    done
+}
+
 b200_apptainer() {
+    _wait_nss
     local pwd_dir="${REPO}"
     if [[ "${1:-}" == "--pwd" ]]; then pwd_dir="$2"; shift 2; fi
     local envs=()
@@ -118,7 +129,7 @@ _chain_exit75() {
     if [[ "${B200_TOP_PID}" == "$$" && -n "${SLURM_JOB_ID:-}" && "${B200_REQUEUE:-1}" == 1 \
           && ( -z "${CHAIN_SIGNAL}" || "${CHAIN_SIGNAL}" == USR1 ) ]]; then
         if (( ${SLURM_RESTART_COUNT:-0} < B200_MAX_REQUEUE )); then
-            echo "REQUEUE job ${SLURM_JOB_ID} (restart ${SLURM_RESTART_COUNT:-0}/${B200_MAX_REQUEUE}, motivo=${CHAIN_SIGNAL:-rc75}) $(date '+%F %T')"
+            _alert "WARN requeue restart=${SLURM_RESTART_COUNT:-0}"; echo "REQUEUE job ${SLURM_JOB_ID} (restart ${SLURM_RESTART_COUNT:-0}/${B200_MAX_REQUEUE}, motivo=${CHAIN_SIGNAL:-rc75}) $(date '+%F %T')"
             scontrol requeue "${SLURM_JOB_ID}" || echo "AVISO: scontrol requeue falhou — ressubmeter manualmente"
         else
             echo "AVISO: teto de requeues (${B200_MAX_REQUEUE}) atingido — ressubmeter manualmente"
@@ -126,6 +137,10 @@ _chain_exit75() {
     fi
     exit 75
 }
+
+# Alertas: toda falha/aborto/requeue vira uma linha em $RUNS_ROOT/ALERTS.log (lido por common/monitor_v9.sh).
+ALERTS="${RUNS_ROOT}/ALERTS.log"
+_alert() { echo "$(date '+%F %T') job=${SLURM_JOB_ID:-?} $*" >> "${ALERTS}" 2>/dev/null || true; }
 
 # _chain_exec CMD... -> executa a etapa (com retry em rc 255 e tratamento de sinal); rc final em CHAIN_RC.
 _chain_exec() {
@@ -140,8 +155,8 @@ _chain_exec() {
         if [[ "${CHAIN_INTERRUPTED}" == 1 ]]; then wait "${CHAIN_CHILD}" 2>/dev/null || true; echo "CHAIN_INTERRUPTED sinal=${CHAIN_SIGNAL} rc=75"; _chain_exit75; fi
         CHAIN_CHILD=''
         # rc 255 = falha transitoria do apptainer/nó (ex.: "unknown userid" do NSS); etapas sao idempotentes -> repetir
-        if [[ "${rc}" == 255 && "${attempt}" -lt "${B200_RETRIES:-3}" ]]; then
-            echo "CHAIN_RETRY rc=255 tentativa ${attempt}/${B200_RETRIES:-3} em 60 s — $*"; attempt=$((attempt+1)); sleep 60; continue
+        if [[ "${rc}" == 255 && "${attempt}" -lt "${B200_RETRIES:-10}" ]]; then
+            echo "CHAIN_RETRY rc=255 tentativa ${attempt}/${B200_RETRIES:-10} em 120 s — $*"; _alert "WARN retry rc=255 (${attempt}/${B200_RETRIES:-10}) ${*:0:160}"; attempt=$((attempt+1)); sleep 120; continue
         fi
         break
     done
@@ -152,13 +167,13 @@ _chain_exec() {
 # chain_run: etapa obrigatoria (falha aborta a cadeia).
 chain_run() {
     _chain_exec "$@"
-    if [[ "${CHAIN_RC}" != 0 ]]; then echo "CHAIN_ABORT: etapa falhou rc=${CHAIN_RC} — $*"; exit "${CHAIN_RC}"; fi
+    if [[ "${CHAIN_RC}" != 0 ]]; then echo "CHAIN_ABORT: etapa falhou rc=${CHAIN_RC} — $*"; _alert "ERROR abort rc=${CHAIN_RC} ${*:0:200}"; exit "${CHAIN_RC}"; fi
 }
 
 # chain_try: etapa opcional (falha e registrada e a cadeia continua); retorna o rc da etapa.
 chain_try() {
     _chain_exec "$@"
-    if [[ "${CHAIN_RC}" != 0 ]]; then echo "CHAIN_TRY_FAILED rc=${CHAIN_RC} — $*"; fi
+    if [[ "${CHAIN_RC}" != 0 ]]; then echo "CHAIN_TRY_FAILED rc=${CHAIN_RC} — $*"; _alert "ERROR step_failed rc=${CHAIN_RC} ${*:0:200}"; fi
     return 0
 }
 
