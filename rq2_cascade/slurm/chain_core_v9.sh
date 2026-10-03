@@ -38,20 +38,21 @@ fwd() { CHAIN_SIGNAL="${CHAIN_SIGNAL:-$1}"; CHAIN_INTERRUPTED=1
         [[ -z "${PID_B}" ]] || kill -USR1 "${PID_B}" 2>/dev/null || true; }
 trap 'fwd USR1' USR1; trap 'fwd TERM' TERM; trap 'fwd INT' INT
 
-wait_rc() { local p=$1 rc=0; while :; do wait "$p" && rc=0 || rc=$?; kill -0 "$p" 2>/dev/null || break; done; echo "${rc}"; }
+# wait_rc PID -> rc em WRC (sem subshell: `wait` so enxerga filhos do shell atual)
+wait_rc() { local p=$1; WRC=0; while :; do wait "$p" && WRC=0 || WRC=$?; kill -0 "$p" 2>/dev/null || break; done; }
 
 if ! { step_done "${RUNS_ROOT}/CHAIN_A_DONE" && step_done "${RUNS_ROOT}/CHAIN_B_DONE"; }; then
     LANE_A=("${REPO}/rq3_tiny_object/slurm/chain_A_detectors.sh"); LANE_B=("${REPO}/rq2_cascade/slurm/chain_B_classifiers.sh")
     if [[ "${G0}" != "${G1}" ]]; then   # 2 GPUs: faixas em paralelo
         CUDA_VISIBLE_DEVICES="${G0}" RUN_E10=0 RUN_E7=1 bash "${LANE_A[@]}" & PID_A=$!
         CUDA_VISIBLE_DEVICES="${G1}" bash "${LANE_B[@]}" & PID_B=$!
-        RC_A=$(wait_rc "${PID_A}"); RC_B=$(wait_rc "${PID_B}")
+        wait_rc "${PID_A}"; RC_A=${WRC}; wait_rc "${PID_B}"; RC_B=${WRC}
     else                                 # 1 GPU: detectores e depois classificadores
         CUDA_VISIBLE_DEVICES="${G0}" RUN_E10=0 RUN_E7=1 bash "${LANE_A[@]}" & PID_A=$!
-        RC_A=$(wait_rc "${PID_A}"); PID_A=''; RC_B=0
+        wait_rc "${PID_A}"; RC_A=${WRC}; PID_A=''; RC_B=0
         if [[ "${RC_A}" == 0 ]]; then
             CUDA_VISIBLE_DEVICES="${G0}" bash "${LANE_B[@]}" & PID_B=$!
-            RC_B=$(wait_rc "${PID_B}")
+            wait_rc "${PID_B}"; RC_B=${WRC}
         fi
     fi
     echo "faixa detectores rc=${RC_A}; faixa classificadores rc=${RC_B}"
