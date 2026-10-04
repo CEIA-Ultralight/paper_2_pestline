@@ -85,7 +85,7 @@ def compute_metrics(targets, predictions, classes=EXPECTED_CLASSES):
     zero in the four-species macro average, rather than disappearing.
     With the BG variant, BG behaves like any other class in the matrix.
     """
-    validate_classes(classes)
+    validate_classes(classes, BG_CLASSES if tuple(classes) == BG_CLASSES else EXPECTED_CLASSES)
     targets, predictions = list(targets), list(predictions)
     if len(targets) != len(predictions):
         raise ValueError("Targets and predictions must have equal lengths")
