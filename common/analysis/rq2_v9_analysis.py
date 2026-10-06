@@ -22,6 +22,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+from statistics import NormalDist
+
 import numpy as np
 import pandas as pd
 
@@ -90,6 +92,25 @@ def load_counts(folder: Path, tau: float | None = None) -> np.ndarray:
     return np.stack([image_counts(r, tau) for r in recs])  # (n_img,5,4)
 
 
+def _bca(boots: np.ndarray, obs: float, counts: np.ndarray, alpha: float = 0.05) -> tuple[float, float]:
+    """IC BCa (vies e aceleracao por jackknife sobre imagens)."""
+    nd = NormalDist()
+    frac = float(np.clip((boots < obs).mean(), 1e-6, 1 - 1e-6))
+    z0 = nd.inv_cdf(frac)
+    n_img = counts.shape[1]
+    tot = counts.sum(1)
+    jack = np.array([delta_f1(tot - counts[:, i]).mean() for i in range(n_img)])
+    d = jack.mean() - jack
+    den = 6.0 * (np.sum(d ** 2) ** 1.5)
+    a = float(np.sum(d ** 3) / den) if den > 0 else 0.0
+    out = []
+    for q in (alpha / 2, 1 - alpha / 2):
+        z = nd.inv_cdf(q)
+        adj = nd.cdf(z0 + (z0 + z) / (1 - a * (z0 + z)))
+        out.append(float(np.percentile(boots, 100 * adj)))
+    return out[0], out[1]
+
+
 def paired_bootstrap(counts: np.ndarray, n_boot: int = 10000, seed: int = 0) -> dict:
     """counts: (n_comb, n_img, 5, 4). Media das combinacoes; reamostra imagens (indices compartilhados)."""
     rng = np.random.default_rng(seed)
@@ -107,7 +128,8 @@ def paired_bootstrap(counts: np.ndarray, n_boot: int = 10000, seed: int = 0) -> 
         perms[b] = delta_f1(c.sum(1)).mean()
     lo, hi = np.percentile(boots, [2.5, 97.5])
     p = (1 + np.sum(np.abs(perms) >= abs(obs))) / (n_boot + 1)
-    return {"delta_f1": obs, "ci_low": lo, "ci_high": hi, "p_perm": p,
+    bca_lo, bca_hi = _bca(boots, obs, counts)
+    return {"delta_f1": obs, "ci_low": lo, "ci_high": hi, "ci_low_bca": bca_lo, "ci_high_bca": bca_hi, "p_perm": p,
             "delta_min": obs_each.min(), "delta_max": obs_each.max(), "n_comb": n_comb, "n_img": n_img}
 
 

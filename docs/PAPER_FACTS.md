@@ -277,14 +277,14 @@ Ressalvas: (i) IC percentil, **não BCa** (BCa e sign-flip por instância não i
 **Setup.** DS-F2_v9.0.5; TEST = 73 imagens, 1210 instâncias de espécie (MD 224, MV 302, MC 268, MF 416); VAL = 52 imagens, 856 instâncias (VAL escolheu `best.pt` → não é held-out). Harness `eval_cascade_matrix` (conf ≥ 0,25, IoU ≥ 0,5, matching class-agnóstico). Política `label_only` (idêntica a `product` no harness atual; artefato conhecido). Métrica: F1 macro das 4 espécies (MD MV MC MF). Runs em `/raid/user_marcospaulo/flydet_runs_v9` (`cascade_{cross,found,rtdetr}_{val,test}`, `oracle_*`, `label_issues`). Foundation models (DINOv2/DINOv3/BioCLIP 2): **fine-tune completo** (lr 2e-5), não LP-FT. Os 9 pares E0 (3 det × 3 clf) **não são independentes**.
 **CSVs (geradores em `common/analysis/`: `rq2_v9_summary.py`, `rq2_v9_analysis.py`; testes em `tests/test_rq2_v9_analysis.py`):** `rq2_cascade/results/v9_cascade_summary.csv`, `v9_cascade_aggregate.csv`, `v9_oracle_summary.csv`, `v9_bootstrap_delta_f1.csv`, `v9_mcnemar.csv`, `v9_oracle_{by_size,confidence,agreement,family,risk_coverage}.csv`, `v9_hybrid_abstention.csv`.
 
-### 10.1 Cascata × detector (TEST, multi-seed detector; F1 macro %, ΔF1 = cascata − detector sozinho, IC 95% percentil de bootstrap pareado sobre imagens, p de permutação pareada; 10 000 reamostragens; **não é BCa**)
+### 10.1 Cascata × detector (TEST, multi-seed detector; F1 macro %, ΔF1 = cascata − detector sozinho, IC 95% percentil de bootstrap pareado sobre imagens, p de permutação pareada; 10 000 reamostragens; **IC BCa** desde 2026-10-06, `ci_low_bca/ci_high_bca` no CSV; percentil também no CSV)
 | Detector | F1 detector | Clf | n pares | ΔF1 [IC] | p_perm |
 |---|---|---|---|---|---|
-| E0 (3 seeds) | 79,5 | ConvNeXt-T CE | 9 | −2,7 [−4,9; −0,4] | 0,013 |
-| E0 | 79,5 | ConvNeXt-T partes | 9 | −1,4 [−3,9; +1,1] | 0,24 |
-| E0 | 79,5 | DINOv2 | 9 | −1,7 [−3,6; +0,0] | 0,037 |
-| E0 | 79,5 | DINOv3 | 9 | −2,0 [−4,1; +0,0] | 0,040 |
-| E0 | 79,5 | BioCLIP 2 | 9 | −1,1 [−2,8; +0,7] | 0,20 |
+| E0 (3 seeds) | 79,5 | ConvNeXt-T CE | 9 | −2,7 [−4,8; −0,3] | 0,013 |
+| E0 | 79,5 | ConvNeXt-T partes | 9 | −1,4 [−3,7; +1,3] | 0,24 |
+| E0 | 79,5 | DINOv2 | 9 | −1,7 [−3,5; +0,1] | 0,037 |
+| E0 | 79,5 | DINOv3 | 9 | −2,0 [−4,0; +0,3] | 0,040 |
+| E0 | 79,5 | BioCLIP 2 | 9 | −1,1 [−2,7; +0,8] | 0,20 |
 | yolo26l (1 seed) | 80,5 | CE / partes / DINOv2 / DINOv3 / BioCLIP 2 | 3 cada | −4,0 / −2,6 / −2,7 / −3,1 / −2,1 | 0,008 / 0,12 / 0,047 / 0,042 / 0,12 |
 | RT-DETR-l s0/s1/s2 | 72,9 / 77,4 / 73,6 (média 74,6) | CE | 3 cada | −5,1 / −4,2 / −2,3 | 0,0006 / 0,003 / 0,18 |
 Nenhuma configuração (5 backbones × 3 detectores) melhora o detector sozinho. IC por linha usa 73 imagens: **TEST pequeno**. VAL (ΔF1 −3,1 a −8,0; `v9_bootstrap_delta_f1.csv`) é pior, mas VAL não é held-out. McNemar (por par, `v9_mcnemar.csv`): p varia entre pares de mesma configuração (ex.: CE+E0_s1 p∈[0,005; 0,51]); **não resumir como um único p**.
@@ -303,5 +303,9 @@ CE 82,7 ±1,0 (n=3 seeds únicos); partes 83,3±1,5; DINOv2 83,8±2,3; DINOv3 83
 ### 10.4 Cascata híbrida com abstenção (E0_s0, TEST; usa o clf só se max-softmax ≥ τ, senão rótulo do detector)
 Detector 79,6; melhor τ=0,9 → ~79,8 (partes), 79,8 (BioCLIP 2), 79,3 (CE): ganho ≤ +0,2 pp, dentro do ruído. `v9_hybrid_abstention.csv`.
 
-### 10.5 Pendente (não citar no paper antes de rodar)
+
+### 10.5 Verificação de vazamento treino → VAL/TEST (CPU; `common/analysis/leakage_check.py`; `rq2_cascade/results/v9_leakage_check.csv`)
+Método: correlação normalizada de miniaturas cinza (crops 32×32, com e sem espelhamento; imagens 48×48) contra todo o treino (1738 imagens, 607 de copy-paste). **Imagem inteira:** nenhuma imagem de VAL/TEST tem similaridade ≥ 0,98 com o treino (máx. 0,949 VAL; 0,962 TEST); ≥ 0,95: 0/52 VAL e 5/73 TEST. **Crops:** ≥ 0,98 em 82/2347 (3,5%) VAL e 161/3460 (4,7%) TEST (53 destes têm como vizinho mais próximo um crop de imagem de copy-paste); ≥ 0,95 em 11,3% e 11,9%. **Leitura:** sem duplicata de imagem; a similaridade alta de crops é compatível com fundo de cola dominando crops pequenos e **não prova vazamento** (sem controle com crops de treino contra treino). Conclusão permitida: "no near-duplicate images between train and VAL/TEST (cosine ≥ 0.98); a small share of crops are highly similar to training crops, which we could not attribute to copy-paste".
+
+### 10.6 Pendente (não citar no paper antes de rodar)
 BG (8 classes) com 3 seeds (job 34026; hoje só seed 126: ΔF1 −2,8 single-seed); curva de aprendizado 25/50/100% (job 34026); TIDE; score ciente de IoU; fusão tardia com probabilidades do detector (o harness só guarda conf top-1 do detector); ablação de vazamento das 607 imagens de copy-paste; RF-DETR/DINOv2.

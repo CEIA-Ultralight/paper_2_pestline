@@ -76,3 +76,8 @@ Todas as refs ★★ abaixo vieram de título/snippet; verificar antes de citar.
 | Patch size/resolução em ViT | Scaling laws in patchification (2502.03738) | Patch 16 sobre objetos de ~40 px upsampled a 384 pode perder detalhe | Baixa prioridade |
 
 **Conclusão da varredura:** os métodos da lista anterior continuam sendo o universo relevante; a 2ª passada acrescentou três itens testáveis (classe de fundo/rejeição, rescoring ciente de IoU, baseline RT-DETR) e um protocolo estatístico (bootstrap pareado BCa + sign-flip). Nenhum método novo de "single-stage melhor para espécie" apareceu além de DETRs e destilação.
+
+## 5. 3ª passada (2026-10-06) — refs verificadas no arXiv e já em `main.bib`
+Verificadas por título/autores/ano na página do arXiv (não li o texto completo): CLOD 2211.13993 (`chachula2023clod`), DCR 1810.04002 (`cheng2018dcr`), bootstrap pareado BCa + sign-flip 2511.19794 (`du2025pairedbootstrap`), FathomNet CLEF 2607.18700 (`brock2026fathomnet`), Object Detection Benchmarks are Incomplete 2609.21822 (`penquitt2026benchmarks`), RF-DETR 2511.09554 (`robinson2025rfdetr`), Cascade R-CNN (`cai2018cascade`), hierárquico em insetos 2607.28005 (já era `mahfoud2026hierarchical`).
+Ainda sem entrada no bib: PMC13283985, PMC6262731 (κ 0,64), TOOD, TSCODE, VarifocalNet. Fine-tune dos foundation models é **completo**, não LP-FT (corrige o plano anterior).
+Estado dos testes pendentes: BCa+sign-flip **feito**; vazamento de imagem **feito** (ver PAPER_FACTS §10.5); calibração/re-rank, TIDE, score ciente de IoU, oráculo por nitidez/densidade **não feitos**; fusão tardia exige guardar a distribuição de classes do detector (GPU); BG multi-seed e curva de aprendizado no job 34026; RF-DETR+DINOv2 e latência não rodados.

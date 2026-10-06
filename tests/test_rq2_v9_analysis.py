@@ -29,6 +29,7 @@ def test_f1_and_bootstrap_sign():
     better = good.copy(); better[:, 1, :] = 0  # detector perde tp
     r = A.paired_bootstrap(better[None], n_boot=200)
     assert r["delta_f1"] > 0 and r["ci_low"] > 0 and r["p_perm"] < 0.05
+    assert r["ci_low_bca"] <= r["delta_f1"] <= r["ci_high_bca"]
 
 
 def test_ece_perfect():
