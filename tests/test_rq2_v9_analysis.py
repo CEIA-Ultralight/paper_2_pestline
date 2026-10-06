@@ -35,3 +35,14 @@ def test_f1_and_bootstrap_sign():
 def test_ece_perfect():
     conf = np.array([1.0, 1.0, 0.5, 0.5]); ok = np.array([1, 1, 1, 0.0])
     assert A.ece(conf, ok) == 0.0
+
+
+def test_late_fusion_w0_equals_classifier():
+    import rq2_v9_extra as E
+    rec = _rec("MD", "MV", "MV", [0.1, 0.5, 0.2, 0.2, 0, 0, 0])
+    rec["proposals"][0]["probabilities"] = [0.1, 0.5, 0.2, 0.2, 0.0, 0.0, 0.0]
+    a = E.fused_counts(rec, 0.0)
+    assert a[3, 1] == 1  # w=0: so o classificador (MV, correto)
+    rec["proposals"][0]["yolo_conf"] = 0.999
+    b = E.fused_counts(rec, 50.0)
+    assert b[3, 1] == 0  # w grande: segue o detector (MD, errado)

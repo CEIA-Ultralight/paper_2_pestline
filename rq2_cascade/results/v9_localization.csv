@@ -1,0 +1,15 @@
+split,detector,species_detection_recall,single_species_macro_f1
+test,E0_s0,97.8512,79.6036
+test,E0_s1,98.0992,80.7305
+test,E0_s2,97.2727,78.2851
+test,E7_yolo26l_s0,97.8512,80.4838
+test,E8_rtdetr_s0,98.3471,72.9058
+test,E8_rtdetr_s1,98.4298,77.3598
+test,E8_rtdetr_s2,98.5950,73.5964
+val,E0_s0,94.8598,83.5657
+val,E0_s1,95.6776,85.4428
+val,E0_s2,95.7944,84.9977
+val,E7_yolo26l_s0,96.3785,83.5304
+val,E8_rtdetr_s0,96.7290,79.7710
+val,E8_rtdetr_s1,97.0794,82.6481
+val,E8_rtdetr_s2,98.4813,83.1858
