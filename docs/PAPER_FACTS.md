@@ -247,3 +247,61 @@ E0 × partes: Δ R +3,3 ± 2,4, P −0,4 ± 2,8, F1 +1,2 ± 2,1 (macro-F1 73,8 �
 `rq3_tiny_object/results/`: `nwd_3x3.csv` (24), `tiny_variants_multiseed.csv` (58), `tiny_variants_paired_tests.csv` (15), `tiny_ablation_single_seed.csv` (22), `recall_by_size.csv` (66), `sahi_multiseed.csv` (12), `tta_vanilla_multiseed_PENDENTE_validacao.csv` (6, **não é fato**). `rq2_cascade/results/`: `cascade_test_seeds.csv` e `cascade_val_seeds.csv` (200 cada), `mcnemar.csv` (160), `confusion_single_vs_cascade.csv` (1.184), `oracle_crops.csv` (112, inclui decomposição), `latency.csv` (168), `classifiers_b200_val_multiseed.csv` (6), `policy_comparison.csv` (184), `ap_per_class.csv` (1.524).
 
 Ressalvas: (i) `paired_discordant` do `metrics.json` conta os 7 classes (todos os GT), não só espécies — o analista recalcula b/c só em espécies (conferido contra o `metrics.json` em 7 classes); (ii) cascata e single usam o mesmo matching por GT (pareado por construção); (iii) a latência de detector do `E0_s0` (20,1 ms na cadeia D) é atípica frente a E0_s1/s2 e E10 (≈8 ms); (iv) TEST já foi consultado em campanhas anteriores (consolidado, não cego).
+
+## 10. Campanha v9 (DS-F2_v9.0.5; 2026-10-05/06) — RQ2 cascata; **supera §9 para a RQ2** (dataset novo)
+
+Fonte: `RUNS_ROOT=/raid/user_marcospaulo/flydet_runs_v9`; geradores rastreados `common/analysis/rq2_v9_summary.py` e `rq2_v9_analysis.py`. TEST = 73 imgs (1.210 GT de espécie); VAL = 52 imgs (856 GT de espécie), **VAL escolheu `best.pt` → não é held-out**. Métrica: F1 macro das 4 espécies (MD MV MC MF). Políticas `label_only` e `product` são **idênticas** no harness (artefato conhecido; reportar uma). Pares det×clf cruzados (E0 3 seeds × 3 seeds clf = 9) **não são independentes**.
+
+| Fato | Valor | Split / seeds | CSV |
+|---|---|---|---|
+| F1 macro detector isolado | E0 (YOLO26m) 79,5 (seeds 79,6/80,7/78,3); YOLO26l 80,5; RT-DETR-l 72,9/77,4/73,6 (média 74,6) | TEST; E0 3 seeds, yolo26l 1 seed, RT-DETR 3 seeds | `v9_cascade_summary.csv` |
+| ΔF1 cascata − detector, E0, por classificador | CE −2,7 ± 1,5; partes −1,4 ± 0,9; DINOv2 −1,7 ± 2,0; DINOv3 −2,0 ± 1,4; BioCLIP 2 −1,1 ± 1,1 | TEST, 9 combos (não indep.) | `v9_cascade_aggregate.csv` |
+| ΔF1, YOLO26l | CE −4,0; partes −2,6; DINOv2 −2,7; DINOv3 −3,1; BioCLIP 2 −2,1 | TEST, 3 seeds clf, 1 seed det | idem |
+| ΔF1, RT-DETR × CE | −5,1 / −4,2 / −2,3 (seeds 0/1/2) | TEST | idem |
+| ΔF1 em VAL | −3,0 a −8,0 (E0×CE −5,5) | VAL (não held-out) | idem |
+| Efeito da cascata | recall de espécie ≈ igual (E0×CE 80,8→79,6); **precisão cai** (79,2→75,1) | TEST | idem |
+| Bootstrap pareado por imagem (10.000 reamostras, IC percentil 95 %; teste de permutação pareado) | E0×CE Δ −2,7 [−4,9; −0,4], p=0,013; E0×partes −1,4 [−3,9; 1,1], p=0,24; E0×DINOv2 −1,7 [−3,6; 0,0], p=0,037; E0×DINOv3 −2,0 [−4,1; 0,0], p=0,040; E0×BioCLIP 2 −1,1 [−2,8; 0,7], p=0,20 | TEST, 73 imgs | `v9_bootstrap_delta_f1.csv` |
+| McNemar single × cascata (espécie, por combo) | maioria das combos n.s. no TEST (mediana p 0,10–0,53 por família); significativo em VAL para CE/partes/BioCLIP 2 (mediana p 0,007–0,03) | TEST/VAL | `v9_mcnemar.csv` |
+| Abstenção (usar classificador só se max-softmax ≥ τ, senão rótulo do detector) | F1 sobe monotonicamente com τ e **nunca supera o detector** (E0_s0×CE: 79,6 no detector; 76,2 τ=0 → 79,3 τ=0,9 → 79,6 τ≥0,95) | TEST | `v9_hybrid_abstention.csv` |
+| Oráculo (crops GT, 15 classificadores) acurácia de espécie | CE 82,7 ± 1,1; partes 83,3 ± 1,9; DINOv2 83,8 ± 2,8; DINOv3 83,5 ± 1,1; BioCLIP 2 83,6 ± 1,4 | TEST, 3 seeds cada | `v9_oracle_summary.csv` |
+| Concordância entre os 15 classificadores | todos corretos 60,0 %; todos errados 4,9 % (MD 25/224, MC 17/268, MF 9/416, MV 8/302); voto majoritário 86,3 % vs média individual 83,4 % | TEST, 1.210 GT | `v9_oracle_agreement.csv` |
+| Confiança dos erros | 69,4 % dos erros têm confiança ≥ 0,8 (5,3 % < 0,5); ECE 0,043 | TEST | `v9_oracle_confidence.csv` |
+| Família MD/MV/MC | acurácia de família (3 espécies colapsadas) 96,0 % vs espécie 80,6 %; 79,2 % dos erros de espécie dentro da família | TEST, 794 GT | `v9_oracle_family.csv` |
+| Acurácia do oráculo por tamanho (√wh, px) | <24: 85,7 (n=454); 24–32: 69,4 (159); 32–48: 81,2 (376); 48–64: 92,0 (207); ≥64: 99,5 (14). **Confundido com espécie** (MF concentra <24, MC ≥48) | TEST | `v9_oracle_by_size.csv` |
+| Risco × cobertura (média dos classificadores) | ver CSV | TEST/VAL | `v9_oracle_risk_coverage.csv` |
+
+Ressalvas: (i) IC percentil, **não BCa** (BCa e sign-flip por instância não implementados); (ii) o classificador com classe BG (8 classes) tem apenas 1 seed (126) até o re-treino; números BG não são fatos; (iii) fine-tune completo (lr 2e-5) nos modelos fundacionais, **não LP-FT**; (iv) 607 imagens de copy-paste no treino — vazamento VAL/TEST não verificado; (v) TIDE, score ciente de IoU e fusão com distribuição de classe do detector **não foram feitos** (o detector só grava top-1 + conf).
+
+## 10. RQ2 no DS-F2_v9.0.5 (campanha oficial v9; gerado em 2026-10-06; **supera** §9 para o RQ2)
+
+**Setup.** DS-F2_v9.0.5; TEST = 73 imagens, 1210 instâncias de espécie (MD 224, MV 302, MC 268, MF 416); VAL = 52 imagens, 856 instâncias (VAL escolheu `best.pt` → não é held-out). Harness `eval_cascade_matrix` (conf ≥ 0,25, IoU ≥ 0,5, matching class-agnóstico). Política `label_only` (idêntica a `product` no harness atual; artefato conhecido). Métrica: F1 macro das 4 espécies (MD MV MC MF). Runs em `/raid/user_marcospaulo/flydet_runs_v9` (`cascade_{cross,found,rtdetr}_{val,test}`, `oracle_*`, `label_issues`). Foundation models (DINOv2/DINOv3/BioCLIP 2): **fine-tune completo** (lr 2e-5), não LP-FT. Os 9 pares E0 (3 det × 3 clf) **não são independentes**.
+**CSVs (geradores em `common/analysis/`: `rq2_v9_summary.py`, `rq2_v9_analysis.py`; testes em `tests/test_rq2_v9_analysis.py`):** `rq2_cascade/results/v9_cascade_summary.csv`, `v9_cascade_aggregate.csv`, `v9_oracle_summary.csv`, `v9_bootstrap_delta_f1.csv`, `v9_mcnemar.csv`, `v9_oracle_{by_size,confidence,agreement,family,risk_coverage}.csv`, `v9_hybrid_abstention.csv`.
+
+### 10.1 Cascata × detector (TEST, multi-seed detector; F1 macro %, ΔF1 = cascata − detector sozinho, IC 95% percentil de bootstrap pareado sobre imagens, p de permutação pareada; 10 000 reamostragens; **não é BCa**)
+| Detector | F1 detector | Clf | n pares | ΔF1 [IC] | p_perm |
+|---|---|---|---|---|---|
+| E0 (3 seeds) | 79,5 | ConvNeXt-T CE | 9 | −2,7 [−4,9; −0,4] | 0,013 |
+| E0 | 79,5 | ConvNeXt-T partes | 9 | −1,4 [−3,9; +1,1] | 0,24 |
+| E0 | 79,5 | DINOv2 | 9 | −1,7 [−3,6; +0,0] | 0,037 |
+| E0 | 79,5 | DINOv3 | 9 | −2,0 [−4,1; +0,0] | 0,040 |
+| E0 | 79,5 | BioCLIP 2 | 9 | −1,1 [−2,8; +0,7] | 0,20 |
+| yolo26l (1 seed) | 80,5 | CE / partes / DINOv2 / DINOv3 / BioCLIP 2 | 3 cada | −4,0 / −2,6 / −2,7 / −3,1 / −2,1 | 0,008 / 0,12 / 0,047 / 0,042 / 0,12 |
+| RT-DETR-l s0/s1/s2 | 72,9 / 77,4 / 73,6 (média 74,6) | CE | 3 cada | −5,1 / −4,2 / −2,3 | 0,0006 / 0,003 / 0,18 |
+Nenhuma configuração (5 backbones × 3 detectores) melhora o detector sozinho. IC por linha usa 73 imagens: **TEST pequeno**. VAL (ΔF1 −3,1 a −8,0; `v9_bootstrap_delta_f1.csv`) é pior, mas VAL não é held-out. McNemar (por par, `v9_mcnemar.csv`): p varia entre pares de mesma configuração (ex.: CE+E0_s1 p∈[0,005; 0,51]); **não resumir como um único p**.
+
+### 10.2 Oráculo (classificador em crops GT; acurácia de espécie em TEST, mean±std entre seeds)
+CE 82,7 ±1,0 (n=3 seeds únicos); partes 83,3±1,5; DINOv2 83,8±2,3; DINOv3 83,5±0,9; BioCLIP 2 83,6±1,1 (todas ≈ 83%; `v9_oracle_summary.csv`). VAL: 87,1–88,3. Teto do oráculo ≈ teto do detector (F1 ≈ 80–81).
+
+### 10.3 Diagnóstico do teto (15 classificadores, TEST; `v9_oracle_*.csv`)
+- Concordância: 60,0% das instâncias acertadas por todos os 15; **4,9% erradas por todos os 15**; 35,1% mistas; voto majoritário 86,3% (média individual 83,4%). All-wrong por classe: MD 25/224, MV 8/302, MC 17/268, MF 9/416.
+- Confiança dos erros: 69,4% dos erros têm max-softmax ≥ 0,8 (confiantes); só 5,3% < 0,5; ECE 0,043.
+- Erros dentro da família MD/MV/MC: 79,2% dos erros de instâncias da família; acurácia no nível de família 96,0% (vs 80,6% por espécie).
+- Tamanho (sqrt(wh) em px da imagem original): acurácia 85,7% (<24; n=454), 69,4% (24–32; 159), 81,2% (32–48; 376), 92,0% (48–64; 207), 99,5% (≥64; 14). **Não monotônica** (composição de classes confunde: MD tem acc 54% em <24 e 65–68% em 24–64) → tamanho sozinho **não** explica o teto de MD.
+- Risco×cobertura (oráculo, média dos clf): acc 83,4% (100%) → 88,4% (80%) → 90,5% (50%).
+- Rótulos suspeitos (confident learning, out-of-sample, **suspeito ≠ errado; sem especialista**): 3,7% (127/3470) em TEST e 4,1% (96/2355) em VAL; confusões dominantes NOISE↔MF, MD↔MV, MC↔MV (`label_issues_{val,test}.csv` em `flydet_runs_v9/label_issues`; ainda sem cópia em `rq2_cascade/results/`).
+
+### 10.4 Cascata híbrida com abstenção (E0_s0, TEST; usa o clf só se max-softmax ≥ τ, senão rótulo do detector)
+Detector 79,6; melhor τ=0,9 → ~79,8 (partes), 79,8 (BioCLIP 2), 79,3 (CE): ganho ≤ +0,2 pp, dentro do ruído. `v9_hybrid_abstention.csv`.
+
+### 10.5 Pendente (não citar no paper antes de rodar)
+BG (8 classes) com 3 seeds (job 34026; hoje só seed 126: ΔF1 −2,8 single-seed); curva de aprendizado 25/50/100% (job 34026); TIDE; score ciente de IoU; fusão tardia com probabilidades do detector (o harness só guarda conf top-1 do detector); ablação de vazamento das 607 imagens de copy-paste; RF-DETR/DINOv2.

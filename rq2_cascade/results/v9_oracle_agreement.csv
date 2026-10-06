@@ -1,0 +1,3 @@
+split,n_clf,n_inst,all_correct,all_wrong,mixed,vote_acc,mean_single_acc,mean_pairwise_agreement,all_wrong_gt_MD_MV_MC_MF
+test,15,1210,0.6000,0.0488,0.3512,0.8628,0.8340,0.8789,MD:25/224 MV:8/302 MC:17/268 MF:9/416
+val,15,856,0.6799,0.0315,0.2886,0.8949,0.8774,0.9023,MD:13/152 MV:3/110 MC:5/168 MF:6/426

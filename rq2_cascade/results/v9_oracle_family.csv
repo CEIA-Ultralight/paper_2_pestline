@@ -1,0 +1,3 @@
+split,n_family_gt,acc_species_in_family,acc_family_level,share_errors_within_family
+test,794,0.8055,0.9596,0.7923
+val,430,0.8310,0.9395,0.6422

@@ -16,6 +16,8 @@
 #   9  clf_bioclip2     BioCLIP 2 (ViT-L/14, img 224) x 3 seeds (idem)
 #  10  matrix_found     cascata {E0 x3, yolo26l} x {DINOv2, DINOv3, BioCLIP 2} em VAL/TEST (+ oraculo)
 #  11  matrix_rtdetr    cascata RT-DETR x CE em VAL/TEST                 [so se o treino passou]
+#  12  lc_*             curva de aprendizado: ConvNeXt-T CE seed 42 com 25% e 50% dos crops de treino (100% = clf_convnext_t_ce_s42)
+#                       + oraculo de crops GT em VAL/TEST (subconjuntos estratificados por symlink, make_crop_fraction.py)
 # Fine-tune completo e nao LP-FT (o trainer nao tem fase de congelamento); declarar no paper.
 # Custo estimado ~16-22 GPU-h. Reentrante (marcadores .OK, DONE, summary.json) e com requeue.
 # =============================================================================
@@ -134,6 +136,24 @@ matrix found "E0_s0 E0_s1 E0_s2 E7_yolo26l_s0" \
     "clf_dinov2_s42 clf_dinov2_s84 clf_dinov2_s126 clf_dinov3_s42 clf_dinov3_s84 clf_dinov3_s126 clf_bioclip2_s42 clf_bioclip2_s84 clf_bioclip2_s126" || true
 matrix rtdetr "E8_rtdetr_s0 E8_rtdetr_s1 E8_rtdetr_s2" \
     "clf_convnext_t_ce_s42 clf_convnext_t_ce_s84 clf_convnext_t_ce_s126" || true
+
+# 12) curva de aprendizado (25% e 50%; 100% ja existe)
+for pct in 25 50; do
+    sub="${USER_ROOT}/datasets/DS-F2_v9.0.5_crops_pad75_frac${pct}"
+    step "lc${pct}_subset" python3 "${REPO}/common/analysis/make_crop_fraction.py" --src "${CROPS}" --dst "${sub}" --frac "0.${pct}" --seed 0 || true
+    if ok "lc${pct}_subset"; then
+        run="clf_convnext_t_lc${pct}_s42"
+        step "${run}" env VARIANT=baseline SEED=42 RUN_NAME="${run}" WANDB_RUN_NAME="${run}" CROPS="${sub}" WANDB_RUN_GROUP=learning_curve bash "${TRAIN_CLF}"
+        if clf_ok "${run}"; then
+            for split in val test; do
+                step "oracle_lc${pct}_${split}" b200_apptainer /opt/venv/bin/python "${REPO}/rq2_cascade/eval_oracle_crops.py" \
+                    --classifier "${RUNS_ROOT}/${run}/best.pt" --classifier-names "${run}" --data "${DATA_ROOT}" --split "${split}" \
+                    --out "${RUNS_ROOT}/oracle_lc${pct}_${split}" \
+                    --wandb --wandb-entity "${WANDB_ENTITY}" --wandb-project "${WANDB_PROJECT}" --wandb-run-name "oracle_lc${pct}_${split}"
+            done
+        fi
+    fi
+done
 
 touch "${RUNS_ROOT}/CHAIN_EXTRAS_DONE"
 echo "EXTRAS v9 FIM $(date); resumo: $(ls "${X}"/*.OK 2>/dev/null | wc -l) etapas OK, $(ls "${X}"/*.FAIL 2>/dev/null | wc -l) falhas (ver ${X}/*.FAIL)"
