@@ -316,5 +316,8 @@ Método: correlação normalizada de miniaturas cinza (crops 32×32, com e sem e
 ### 10.6b BG (classificador de 8 classes com fundo; 3 seeds de clf × detector E0 s0–2; `v9_bootstrap_delta_f1.csv`, `oracle_bg_*/clf_*/metrics.json`)
 - TEST: ΔF1 −2,75 pp, IC BCa [−4,78; −0,44], p_perm 0,010 (CE: −2,67). VAL: −5,43 (CE −5,52). Oráculo BG (acurácia de espécie, crops GT): TEST 77,55±2,78; VAL 80,84±1,93.
 
+### 10.6c Curva de aprendizado (ConvNeXt-T seed 42, single-seed; `v9_learning_curve.csv`, gerador `common/analysis/rq2_v9_lc_bg.py`; job 34130)
+- Acurácia no oráculo, 25/50/100% dos crops: TEST 83,0/81,7/82,6; VAL 85,7/85,5/88,9. Platô no TEST: compatível com ambiguidade, não prova. BG oráculo em `v9_oracle_bg.csv`.
+
 ### 10.7 Pendente (não citar no paper antes de rodar)
-curva de aprendizado 25/50/100% (job 34130; o 34026 falhou por symlinks, corrigido com hardlinks); TIDE; score ciente de IoU; fusão tardia com scores reais do detector; RF-DETR+DINOv2 (sem `rfdetr` no container); oráculo por nitidez/aglomeração
+TIDE; score ciente de IoU; fusão tardia com scores reais do detector; RF-DETR+DINOv2 (sem `rfdetr` no container); oráculo por nitidez/aglomeração
