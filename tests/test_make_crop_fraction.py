@@ -15,4 +15,5 @@ def test_fraction_stratified_and_deterministic(tmp_path):
     r2 = build(src, tmp_path / "d2", 0.25, 0)
     assert r1 == {"A": 5, "B": 2}
     assert sorted(p.name for p in (tmp_path / "d1/train/A").iterdir()) == sorted(p.name for p in (tmp_path / "d2/train/A").iterdir())
-    assert (tmp_path / "d1" / "val").is_symlink()
+    assert not any(p.is_symlink() for p in (tmp_path / "d1").rglob("*"))
+    assert (tmp_path / "d1" / "val" / "A").is_dir()

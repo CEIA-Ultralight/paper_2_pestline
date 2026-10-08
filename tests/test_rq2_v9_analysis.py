@@ -46,3 +46,4 @@ def test_late_fusion_w0_equals_classifier():
     rec["proposals"][0]["yolo_conf"] = 0.999
     b = E.fused_counts(rec, 50.0)
     assert b[3, 1] == 0  # w grande: segue o detector (MD, errado)
+
