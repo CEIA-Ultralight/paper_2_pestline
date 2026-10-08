@@ -313,5 +313,8 @@ Método: correlação normalizada de miniaturas cinza (crops 32×32, com e sem e
 - Latência (TEST, B200, FP32, 1920; ms/img, média entre execuções; varia entre jobs): detector 8,6–11,6; e2e E0+CE 407, parts 353, DINOv3 487, BioCLIP2 462, DINOv2 573 → ~30–67× o detector.
 - Fusão tardia **APROXIMADA** (distribuição do detector inferida da conf top-1; p_clf·p_det^w), F1 macro TEST: E0 79,54; cascata (w=0) 76,87; w=0,25 77,95; 0,5 78,72; 1 79,53; 2 79,56. VAL: E0 84,67; w=2 84,35. Não é a fusão com scores reais do detector.
 
+### 10.6b BG (classificador de 8 classes com fundo; 3 seeds de clf × detector E0 s0–2; `v9_bootstrap_delta_f1.csv`, `oracle_bg_*/clf_*/metrics.json`)
+- TEST: ΔF1 −2,75 pp, IC BCa [−4,78; −0,44], p_perm 0,010 (CE: −2,67). VAL: −5,43 (CE −5,52). Oráculo BG (acurácia de espécie, crops GT): TEST 77,55±2,78; VAL 80,84±1,93.
+
 ### 10.7 Pendente (não citar no paper antes de rodar)
-BG (8 classes) com 3 seeds (job 34026; hoje só seed 126: ΔF1 −2,8 single-seed); curva de aprendizado 25/50/100% (job 34026); TIDE; score ciente de IoU; fusão tardia com scores reais do detector; RF-DETR+DINOv2 (sem `rfdetr` no container); oráculo por nitidez/aglomeração
+curva de aprendizado 25/50/100% (job 34130; o 34026 falhou por symlinks, corrigido com hardlinks); TIDE; score ciente de IoU; fusão tardia com scores reais do detector; RF-DETR+DINOv2 (sem `rfdetr` no container); oráculo por nitidez/aglomeração
