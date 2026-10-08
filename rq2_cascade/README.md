@@ -49,7 +49,7 @@ reduz AP.
     risco–cobertura e abstenção hierárquica (família); confusão CE vs parts multi-seed; bootstrap por imagem como teste primário.
   - P0 GPU/humano: ruído de rótulo — confident learning (5-fold OOF nos crops GT) + re-anotação cega de ~150 crops
     MD/MV/MC por especialista (κ).
-  - P1 GPU: backbone foundation (DINOv3, BioCLIP 2, LP-FT) × 3 seeds; fusão tardia YOLO+classificador; curva de
+  - P1 GPU: backbone foundation (DINOv3, BioCLIP 2, LP-FT) × 3 seeds; fusão tardia YOLO+classificador (aproximada feita; real pendente); curva de
     sensibilidade à resolução do crop; cascata sobre yolo26l (E7); benchmark de latência dedicado.
   - P2: crop duplo (justo + contexto), perda hierárquica, treino robusto a ruído (só se ruído ≥ 5 %).
 - [ ] Declarar seleção de modelo: VAL usada para `best.pt` → não é held-out; TEST já consultado → "consolidado".
@@ -59,3 +59,8 @@ reduz AP.
 
 - `cascade_test_seeds.csv` — seed_det, seed_clf, classificador, recall/precisão/F1 por espécie, mAP50, ms/img.
 - `confusion_single_vs_cascade.csv`, `mcnemar.csv`, `latency.csv`.
+
+## Estado final da campanha v9 (2026-10-08)
+- Feito: 5 backbones × 3 detectores, BG ×3 seeds (sem ganho), confident learning, bootstrap BCa + permutação, McNemar, confusão single×cascata, latência, localização, fusão tardia aproximada, curva de aprendizado (platô no TEST). Texto em `manuscript/sec/5_experiments.tex` (`sec:exp:rq2v9`).
+- Não feito (declarado como limitação): TIDE, re-pontuação ciente de IoU, oráculo por nitidez/aglomeração, fusão tardia com scores reais do detector, RF-DETR+DINOv2, re-anotação por especialista.
+- Pendente do autor: figuras (`fig_cascade_tradeoff`, `fig_confusion`, `fig_oracle_decomp`), refs ausentes (PMC6262731, PMC13283985, TOOD, TSCODE, VarifocalNet), TODOs de decisão.

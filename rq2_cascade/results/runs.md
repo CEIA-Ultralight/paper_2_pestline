@@ -57,4 +57,5 @@ Notas (slurm-runner, 2026-09-27): cadeia B (33322) COMPLETED 01:44 (2h49), `CHAI
 
 ## 2026-10-06 — análises CPU RQ2 v9 (sem job Slurm)
 - `common/analysis/rq2_v9_analysis.py` e `rq2_v9_summary.py` sobre `/raid/user_marcospaulo/flydet_runs_v9` → `v9_*.csv` (ver PAPER_FACTS §10). Commit: ver `git log` (análises CPU RQ2 v9).
-- Job 34026 (p2v9-extras, b200n1): re-treino `clf_convnext_t_bg_s42/s84` (pastas antigas em `extras/_stale/bg_rerun_20261006`), `matrix_bg`/`oracle_bg` com 3 seeds, curva de aprendizado `clf_convnext_t_lc{25,50}_s42` + `oracle_lc*`. Estado: PENDING no momento do registro.
+- Job 34026 (p2v9-extras, b200n1): re-treino `clf_convnext_t_bg_s42/s84` (pastas antigas em `extras/_stale/bg_rerun_20261006`), `matrix_bg`/`oracle_bg` com 3 seeds, curva de aprendizado `clf_convnext_t_lc{25,50}_s42` + `oracle_lc*`. Estado: BG 3 seeds concluído; a curva de aprendizado falhou (`Symlinks are disallowed inside train`).
+- Job 34130 (p2v9-extras, b200n1, 2026-10-08): reenvio após `make_crop_fraction.py` passar a usar hardlinks (commit d5c9632). `clf_convnext_t_lc{25,50}_s42` e `oracle_lc{25,50}_{val,test}` COMPLETED (exit 0:0), `CHAIN_EXTRAS_DONE`. Saídas: `v9_learning_curve.csv`, `v9_oracle_bg.csv` (gerador `common/analysis/rq2_v9_lc_bg.py`). Resultado: oráculo TEST 83,0/81,7/82,6 % (25/50/100 %), platô; PAPER_FACTS §10.6c.
