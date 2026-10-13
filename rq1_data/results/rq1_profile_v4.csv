@@ -1,0 +1,4 @@
+split,origin,orig_images,instances,inst_per_img,mean_sqrt_wh_px,MD,MV,MC,MF,INS,NOISE,MAR
+test,DS_F2-v3,41,13980,341.0,17.7,1007,787,219,472,8240,3255,0
+train,DS_F2-v3,82,25393,309.7,17.9,1832,1143,370,1185,16053,4810,0
+val,DS_F2-v3,14,3832,273.7,20.6,469,168,107,158,1765,1165,0
