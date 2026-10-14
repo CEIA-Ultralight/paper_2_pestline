@@ -321,3 +321,14 @@ Método: correlação normalizada de miniaturas cinza (crops 32×32, com e sem e
 
 ### 10.7 Pendente (não citar no paper antes de rodar)
 TIDE; score ciente de IoU; fusão tardia com scores reais do detector; RF-DETR+DINOv2 (sem `rfdetr` no container); oráculo por nitidez/aglomeração
+
+## 11. RQ1 — escada de dados (TEST DS-F2_v9.0.5 fixo, receita E0, YOLO26m, **multi-seed 0/1/2**; gerado em 2026-10-14)
+Fonte: `rq1_data/results/{ablation_ladder,ablation_ladder_summary,ladder_*}.csv`; gerador `common/analysis/rq1_ladder_analysis.py`; job 34630; W&B `pestline/paper2-rq1-data`. L3 = E0_s0/1/2 da RQ2. TEST (73 imgs, 1.210 GT de espécie); best.pt escolhido na VAL, TEST não participa. Acurácia por espécie = casado (IoU≥0,5, conf≥0,25) E classe certa / GT.
+- Acurácia média±dp (3 seeds): L0 0,561±0,006; L1 0,738±0,004; L2 0,797±0,015; L2ORG 0,811±0,012; L3 0,822±0,016. Recall de detecção (sem classe): 0,923 / 0,960 / 0,976 / 0,979 / 0,977.
+- Δ vs L3 (bootstrap por imagem, 10k, seeds agrupadas): L0 −0,261 [−0,335;−0,189]; L1 −0,084 [−0,123;−0,049]; L2 −0,025 [−0,048;−0,001]; L2ORG −0,012 [−0,029;+0,003] (meia-largura 0,016). McNemar por seed: L0/L1 p<1e-8 nas 3 seeds; L2 p=0,019/1e-7/0,57; L2ORG p=0,055/0,15/0,93. L2ORG≈L3 **não é equivalência provada** (IC inclui 0).
+- Recall por tamanho (<32 / 32–48 / ≥48 px, média de 3 seeds, ver `ladder_size_bins.csv`): ganho L0→L3 concentrado em objetos <32 px (~0,44→~0,81) e continua nas outras faixas.
+- FP de espécie em 6 placas só-INS (conf≥0,25, por seed): L0 74/87/66; L1 45/57/43; L2 0/0/0; L2ORG 0/3/2; L3 0/0/0. Salto entre L1 e L2 (placas v8/v9 com INS).
+- Placas densas (≥30 espécies; 7 placas, 230 GT): L0 ~0,59; L1 ~0,75; L2 ~0,79; L2ORG ~0,83; L3 ~0,84 — melhora, mas amostra pequena (7 placas), seeds ruidosas.
+- Recall MD (pior espécie): L0 0,44; L1 0,66; L2 0,69; L2ORG 0,64; L3 0,65 (dp até 0,13). Papel branco (L2→L2ORG) não melhora MD; ganho L2→L2ORG está em MF/MV.
+- H2 (confusão entre localizados, `ladder_confusion.csv`, seeds agrupadas): MC→MV 18,5% (L0) → 14,5% (L2) → 11,7% (L3); MV→MC 14,8% → 6,3% → 5,4%; MF→não-espécie 46% → 17% → 9%. **H2 (confusão inalterada) NÃO se sustenta integralmente**: MV↔MC cai, mas MC→MV persiste em ~12% em L3.
+- Ressalvas: L0 é pequeno (lote v5.1); quantidade e qualidade estão confundidas entre braços (controle de subamostra de L2 não rodado); L2ORG tem ORG≈42% do treino; cópia-e-cola só em L3 (L2→L3 mistura copy-paste + DS-ORG removido).
