@@ -18,3 +18,8 @@ Hipóteses: H1 recall sobe onde as coletas miram (bins de tamanho √wh, placas 
 4. `manuscript/sec/3_dataset.tex` e `5_experiments.tex` §RQ1 (tab:rq1_mapping, tab:rq1_ablation, fig:rq1_confusion); tectonic; commit no submodule e `git add manuscript`. Não alterar tese sem o autor: sinalizar.
 ## Pendências abertas
 607 vs 869 imagens copy-paste (PAPER_FACTS vs nomes `-instance`); "graduated-density" vs "graduada"; remoção do DS-ORG na v9.0.5 sem justificativa documentada; acrônimo MF (flesh fly no PACBB vs fruit fly aqui).
+
+## ESTADO FINAL (2026-10-14) — RQ1 CONCLUÍDA
+- Job 34630 terminou (12/12 DONE, RQ1_CHAIN_DONE). CSVs em `rq1_data/results/` (gerador `common/analysis/rq1_ladder_analysis.py`); fatos em `docs/PAPER_FACTS.md` §11; LEDGER e runs.md atualizados.
+- Manuscrito: §RQ1 de `manuscript/sec/5_experiments.tex` reescrita (escada L0–L3, tabela, figura `figs/rq1_confusion.pdf` via `common/analysis/rq1_confusion_fig.py`). Compila.
+- Pendências para o AUTOR: ver lista no relatório final (STID "subconjunto próprio" em §3, definição de "graduada", DS-ORG removido na v9.0.5, sigla MF, framing "alavancas", IC das taxas de confusão, controle de subamostra de L2 não rodado, tabela de lotes em §3 e contagem de págs).
