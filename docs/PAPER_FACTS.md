@@ -332,3 +332,25 @@ Fonte: `rq1_data/results/{ablation_ladder,ablation_ladder_summary,ladder_*}.csv`
 - Recall MD (pior espécie): L0 0,44; L1 0,66; L2 0,69; L2ORG 0,64; L3 0,65 (dp até 0,13). Papel branco (L2→L2ORG) não melhora MD; ganho L2→L2ORG está em MF/MV.
 - H2 (confusão entre localizados, `ladder_confusion.csv`, seeds agrupadas): MC→MV 18,5% (L0) → 14,5% (L2) → 11,7% (L3); MV→MC 14,8% → 6,3% → 5,4%; MF→não-espécie 46% → 17% → 9%. **H2 (confusão inalterada) NÃO se sustenta integralmente**: MV↔MC cai, mas MC→MV persiste em ~12% em L3.
 - Ressalvas: L0 é pequeno (lote v5.1); quantidade e qualidade estão confundidas entre braços (controle de subamostra de L2 não rodado); L2ORG tem ORG≈42% do treino; cópia-e-cola só em L3 (L2→L3 mistura copy-paste + DS-ORG removido).
+
+## 12. RQ3 no DS-F2_v9.0.5 — campanha dgx1/V100 (E0 × NWD, **multi-seed 0/1/2**; gerado em 2026-10-16)
+**Campanha separada** da B200 (§9/§10/§11): 1× V100 32 GB, Docker `pestline-rq3:cu124` (torch 2.6.0+cu124, ultralytics 8.4.142, fly_det b36580a); E0 aqui é o baseline **desta** campanha — não misturar com o E0 da §10 na mesma tabela. Receita E0 idêntica (yolo26m, 150 ép., batch 8, imgsz 1920, patience 30, `best.pt` na VAL); E10 = 0,5·CIoU + 0,5·NWD, C=44 px (medido no v8.1.1, não recalculado), scope=both. TEST 73 imgs / 3.494 GT / 1.210 de espécie (MD 224, MV 302, MC 268, MF 416), harness P2 (`eval_cascade_matrix`, conf ≥ 0,25, IoU ≥ 0,5, class-agnóstico). VAL 52 imgs / 2.359 GT (não held-out). 83 HEIC convertidas para PNG antes do treino (sem isso o TEST contava 2.980 GT). Fonte: `rq3_tiny_object/results/v9_dgx1_nwd_{runs,summary,paired,size_bins}.csv`; gerador `common/analysis/rq3_v9_dgx1_analysis.py`; runs em `rq3_tiny_object/results/runs.md`. Média ± desvio amostral (ddof=1); Δ = E10 − E0 pareado por seed.
+
+| Métrica | E0 (n=3) | E10 NWD (n=3) | Δ E10−E0 (média ± std; por seed) |
+|---|---:|---:|---|
+| TEST macro-F1 espécie | 78,8 ± 2,6 | 79,3 ± 0,8 | +0,5 ± 3,1 (+0,6 / −2,6 / +3,5) |
+| TEST micro R / P / F1 | 81,7±0,9 / 77,8±4,1 / 79,7±2,3 | 81,7±0,6 / 78,6±0,8 / 80,1±0,6 | R +0,0 ± 0,9; P +0,8 ± 4,2; F1 +0,5 ± 2,5 |
+| TEST acc\|loc | 83,5 ± 0,8 | 83,2 ± 0,3 | −0,2 ± 0,7 |
+| TEST recall de detecção (espécie, class-agnóstico) | 97,9 ± 0,3 | 98,2 ± 0,4 | +0,3 ± 0,6 |
+| VAL mAP50 (best.pt, 7 classes) | 88,5 ± 0,4 | 87,3 ± 0,6 | **−1,1 ± 0,4** (3/3 negativos) |
+| VAL mAP50:95 | 63,8 ± 0,1 | 62,0 ± 0,4 | **−1,7 ± 0,4** (3/3 negativos) |
+| Recall TEST por espécie MD / MV / MC / MF | 63,7 / 86,8 / 87,7 / 83,8 | 62,5 / 91,4 / 87,8 / 81,1 | −1,2±3,9 / **+4,6±0,7** / +0,1±6,1 / −2,7±3,3 |
+| Épocas até early stop (best) | 75 (45 ± 7) | 86 (56 ± 12) | — |
+| Tempo de treino (V100) | 2,20 ± 0,22 h | 2,54 ± 0,31 h | +0,34 h (~+15 %) |
+
+- **McNemar exato** (acerto de espécie, 1.210 GT, por seed): s0 b=64/c=70, p=0,67 (Δacc −0,50); s1 b=54/c=60, p=0,64 (−0,50); s2 b=80/c=67, p=0,32 (+1,07). **0/3 significativos.**
+- **Bootstrap por imagem** (seeds agrupadas, 10.000 reamostras, 67 imagens com espécie, IC percentil): Δacc **+0,03 p.p. [−1,57; +1,68]** — IC inclui 0; meia-largura 1,6 p.p.
+- **Recall de espécie por tamanho** (√wh px; <32 n=613, 32–48 n=376, ≥48 n=221): Δ <32 **−1,7 ± 1,1** (3/3 negativos: −1,5/−0,8/−2,9); 32–48 +2,9 ± 3,5; ≥48 +0,0 ± 2,0 → **NWD não ajuda os objetos pequenos** (se algo, piora levemente).
+- Latência do detector (V100, FP32, 1920): E0 42,4 ± 1,0 ms/img; E10 43,0 ± 0,1 (NWD não muda a inferência).
+- **Leitura:** reproduz a §9.1 (B200, v8.1.1: Δ macro-F1 +0,8 ± 1,5, sem efeito) no dataset do paper: **NWD não melhora a identificação de espécie** (Δ < std em todas as métricas de TEST, 0/3 McNemar) e **piora a localização fina no VAL** (mAP50:95 −1,7 ± 0,4, mesmo sinal da B200 −0,9 ± 0,5). Único efeito por espécie com |média| > std: recall MV +4,6 ± 0,7 (sem correção para múltiplas comparações; 4 espécies × várias métricas → exploratório). A variância entre seeds do E0 (macro-F1 std 2,6) é maior que o efeito.
+- **Não rodado no v9:** GCD, P2, RFLA, ablações loss/assigner, SAHI — para esses, só existe a §9 (B200, v8.1.1).

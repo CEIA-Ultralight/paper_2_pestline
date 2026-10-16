@@ -50,3 +50,18 @@ Notas (slurm-runner, 2026-09-26): partição **b200n1** (dgx-B200-1, 8×B200 178
 Notas (slurm-runner, 2026-09-27): cadeia A (33321) COMPLETED 02:38 (3h43), `CHAIN_A_DONE` criado; cadeia B (33322) COMPLETED 01:44. Cadeia C submetida 11:24 como **33363** (commit 47ea2c7; `bash -n` OK; partition b200n1, gpu:1, signal B:SIGUSR1@300, requeue, log `/raid/user_marcospaulo/slurm_logs/p2-chainC-extra_33363.out`). Passou `b200_guard` + PRECHECK (torch 2.8.0+cu128, ultralytics 8.4.142, patch gcd/both aplicado) e iniciou `E11_gcd_w0.5_s0` às 11:27 (B200 182 GiB, ~25 s/época → ~1 h/treino). Custo estimado da cadeia: 9–11 GPU-h (`--time=48:00:00`). Saídas em `/raid/user_marcospaulo/flydet_runs/<RUN>/`; marcador final `CHAIN_C_DONE`. Se cair: `sbatch rq3_tiny_object/slurm/chain_C_extra.sh` (idempotente por `DONE`/`last.pt`). Fila do QOS `onejob` (2 RUNNING): a 2ª vaga estava ocupada pelo job 33362 `drb-matrix-v18` (outro projeto, h100n2), por isso a cadeia D (33364) ficou PENDING `QOSMaxJobsPerUserLimit` até C ou 33362 terminar.
 
 Notas (analyst, 2026-09-26): jobs de 2026-09-06/07 anteriores ao registro Slurm → "n/d"; commits não registrados no W&B. Seeds "efetiva 0" inferidas por summary byte-idêntico (mAP50 0,854434 etc.), ver `docs/PAPER_FACTS.md` §1. Durações = `_runtime` do W&B.
+
+## Campanha dgx1 (V100) — RQ3 no DS-F2_v9.0.5 (2026-10-14/15)
+
+Sem Slurm: fila no host (`rq3_tiny_object/dgx1/run_queue.sh`, GPU 0) → Docker `pestline-rq3:cu124` (torch 2.6.0+cu124, ultralytics 8.4.142) → `train_one.sh` (receita E0: yolo26m, 150 ép., batch 8, imgsz 1920, patience 30, deterministic). fly_det @ b36580a. Dataset `~/pestline/datasets/DS-F2_v9.0.5` (83 HEIC → PNG). Saídas `~/pestline/flydet_runs_rq3_v9_dgx1/<RUN>/`; logs `~/pestline/logs/<RUN>.log`. W&B `pestline/paper2_rq3`. TEST: 73 imgs / 3.494 GT / 1.210 de espécie (conferido nos 6 `metrics.json`).
+
+| Data | Job | Script | Commit (repo / fly_det) | Seed | Config | W&B (treino / test_eval) | Estado | CSV |
+|---|---|---|---|---|---|---|---|---|
+| 2026-10-14 | fila dgx1 GPU0 | `run_queue.sh` → `train_one.sh` | 910888c+dgx1 (não commitado) / b36580a | 0 | E0 baseline | aa7yce65 / pd19zxso | COMPLETED (81 ép., best 51, 2,35 h) | `v9_dgx1_nwd_*.csv` — PAPER_FACTS §12 |
+| 2026-10-14 | idem | idem | idem | 0 | E10 NWD w=0,5 C=44 scope=both | bwpkqn7t / c2dgh5g1 | COMPLETED (97 ép., best 67, 2,85 h) | idem |
+| 2026-10-14 | idem | idem | idem | 1 | E0 | oija3f1j / qfof75pu | COMPLETED (67 ép., best 37, 1,95 h) | idem |
+| 2026-10-14 | idem | idem | idem | 1 | E10 NWD | y5up0fdo / nvigff33 | COMPLETED (86 ép., best 56, 2,54 h) | idem |
+| 2026-10-15 | idem | idem | idem | 2 | E0 | 6uio1a3r / gmz9m6qw | COMPLETED (77 ép., best 47, 2,30 h) | idem |
+| 2026-10-15 | idem | idem | idem | 2 | E10 NWD | c95mmtxv / yn14rd8t | COMPLETED (74 ép., best 44, 2,22 h) | idem |
+
+Notas (2026-10-16): todos com early stop (patience 30); fila inteira ≈ 14,2 h (16h33 de 14/out → 06h56 de 15/out). Smoke `smoke_E0` (oy267n1h / 2tdjry06) não entra em CSV. Runs inválidos no W&B (TEST incompleto, sem HEIC): `kean52sk`, `qlsyy0r4`. Gerador: `common/analysis/rq3_v9_dgx1_analysis.py <runs> <logs> rq3_tiny_object/results`.
