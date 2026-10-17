@@ -16,6 +16,8 @@
 #   E14_nwd_rfla_s0             NWD + RFLA
 #   E1_p2_s{0,1,2}              head P2 (yolo26m-p2.yaml, pretrained yolo26m.pt)
 #   E7_yolo26l_s0               yolo26l baseline
+#   E14_nwd_rfla_s{0,1,2} | E15_nwd_loss_s{0,1,2} | E16_nwd_assigner_s{0,1,2} | E20_wiou_s{0,1,2}
+#   E21_imgsz2560_s{0,1,2} (batch 4) | E22_yolo11m_s0 | E7_yolo26l_s{0,1,2}
 #   smoke_E0                    1 epoca (confere GPU, memoria, W&B e o TEST eval)
 #
 # Reentrante: run com $RUNS_ROOT/<RUN>/DONE e pulado; run interrompido retoma de last.pt.
@@ -50,9 +52,14 @@ spec() {
         E11_gcd_w0.5_s[0-9])       printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=gcd FLYDET_NWD_SCOPE=both ;;
         E10_nwd_w0.5_loss_s0)      printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=loss ;;
         E10_nwd_w0.5_assigner_s0)  printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=assigner ;;
-        E14_nwd_rfla_s0)           printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=both FLYDET_RFLA=1 ;;
+        E14_nwd_rfla_s[0-9])       printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=both FLYDET_RFLA=1 ;;
+        E15_nwd_loss_s[0-9])       printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=loss ;;
+        E16_nwd_assigner_s[0-9])   printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=assigner ;;
+        E20_wiou_s[0-9])           printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=wiou FLYDET_NWD_SCOPE=loss ;;
+        E21_imgsz2560_s[0-9])      printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=off IMGSZ=2560 BATCH=4 ;;
+        E22_yolo11m_s0)            printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=off MODEL=yolo11m.pt ;;
         E1_p2_s[0-9])              printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=off MODEL=yolo26m.pt MODEL_CFG=yolo26m-p2.yaml ;;
-        E7_yolo26l_s0)             printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=off MODEL=yolo26l.pt ;;
+        E7_yolo26l_s[0-9])         printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=off MODEL=yolo26l.pt ;;
         smoke_E0)                  printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=off EPOCHS=1 PATIENCE=1 FLYDET_SAVE_PERIOD=1 ;;
         *) return 1 ;;
     esac
@@ -66,7 +73,7 @@ for RUN in "$@"; do
     envs=()
     while IFS= read -r kv; do envs+=(-e "${kv}"); done < <(spec "${RUN}")
     # Overrides opcionais vindos do host (ex.: BATCH=4 se der OOM; vale para a fila inteira)
-    for v in BATCH EPOCHS PATIENCE WORKERS; do [[ -z "${!v:-}" ]] || envs+=(-e "${v}=${!v}"); done
+    for v in BATCH IMGSZ EPOCHS PATIENCE WORKERS; do [[ -z "${!v:-}" ]] || envs+=(-e "${v}=${!v}"); done
 
     echo "########## $(date '+%F %T') GPU=${GPU} ${RUN} ##########"
     # rq2_cascade/eval_yolo_cascade.allocation_guard foi escrito para a B200 (exige Slurm + Apptainer);
