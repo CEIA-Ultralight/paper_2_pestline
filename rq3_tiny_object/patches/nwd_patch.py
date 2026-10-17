@@ -44,10 +44,33 @@ from ultralytics.utils.tal import TaskAlignedAssigner, bbox2dist
 NWD_W = float(os.environ.get("FLYDET_NWD_W", "0.5"))
 NWD_C = float(os.environ.get("FLYDET_NWD_C", "44.0"))
 NWD_MODE = os.environ.get("FLYDET_NWD_MODE", "nwd").strip().lower()
-VALID_MODES = ("nwd", "gcd", "off")
+VALID_MODES = ("nwd", "gcd", "wiou", "off")
 VALID_SCOPES = ("loss", "assigner", "both")
 
 _PATCHED = False
+
+# Wise-IoU v3 (Tong et al., arXiv:2301.10051): L = r * R_WIoU * (1 - IoU), r = beta / (delta * alpha**(beta - delta)),
+# beta = L_IoU / media_movel(L_IoU) (outlier degree, sem gradiente). So a loss de caixa (scope=loss).
+WIOU_ALPHA = float(os.environ.get("FLYDET_WIOU_ALPHA", "1.9"))
+WIOU_DELTA = float(os.environ.get("FLYDET_WIOU_DELTA", "3.0"))
+WIOU_MOMENTUM = float(os.environ.get("FLYDET_WIOU_MOMENTUM", "0.01"))
+_WIOU_STATE = {"mean": 1.0}
+
+
+def wiou_v3_loss(pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """Loss WIoU v3 por caixa (xyxy, pixels), shape (N, 1). Atualiza a media movel de L_IoU."""
+    iou = bbox_iou(pred, target, xywh=False, CIoU=False)
+    l_iou = 1.0 - iou
+    c1, c2 = (pred[..., :2] + pred[..., 2:]) / 2.0, (target[..., :2] + target[..., 2:]) / 2.0
+    lt = torch.minimum(pred[..., :2], target[..., :2])
+    rb = torch.maximum(pred[..., 2:], target[..., 2:])
+    diag = ((rb - lt) ** 2).sum(-1, keepdim=True).detach().clamp(min=1e-9)
+    r_wiou = torch.exp(((c1 - c2) ** 2).sum(-1, keepdim=True) / diag)
+    with torch.no_grad():
+        _WIOU_STATE["mean"] = (1 - WIOU_MOMENTUM) * _WIOU_STATE["mean"] + WIOU_MOMENTUM * float(l_iou.mean())
+        beta = l_iou.detach() / max(_WIOU_STATE["mean"], 1e-9)
+        r = beta / (WIOU_DELTA * WIOU_ALPHA ** (beta - WIOU_DELTA))
+    return r * r_wiou * l_iou
 
 
 def resolve_mode() -> str:
@@ -114,10 +137,13 @@ def _patched_bbox_loss_forward(
     `iou` passa a ser a media ponderada (1-w)*CIoU + w*NWD.
     """
     weight = target_scores[fg_mask].sum(-1, keepdim=True)
-    iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
-    nwd = tiny_similarity(pred_bboxes[fg_mask], target_bboxes[fg_mask])
-    iou = (1.0 - NWD_W) * iou + NWD_W * nwd
-    loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
+    if NWD_MODE == "wiou":
+        loss_iou = (wiou_v3_loss(pred_bboxes[fg_mask], target_bboxes[fg_mask]) * weight).sum() / target_scores_sum
+    else:
+        iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
+        nwd = tiny_similarity(pred_bboxes[fg_mask], target_bboxes[fg_mask])
+        iou = (1.0 - NWD_W) * iou + NWD_W * nwd
+        loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
 
     # DFL loss (copiado sem alteracao do original)
     if self.dfl_loss:
@@ -167,7 +193,7 @@ def apply_nwd_patch() -> dict:
     if mode == "off":  # E0 puro / multi-seed do baseline: sem patch
         print("[nwd_patch] FLYDET_NWD_MODE=off — treino SEM patch (baseline)")
         return {"nwd": False, "nwd_mode": "off"}
-    scope = resolve_scope()
+    scope = "loss" if mode == "wiou" else resolve_scope()  # WIoU nao tem analogo no assigner
     cfg = {"nwd": True, "nwd_w": NWD_W, "nwd_c": NWD_C, "nwd_mode": mode, "nwd_scope": scope}
     if _PATCHED:
         return cfg

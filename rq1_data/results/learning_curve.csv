@@ -1,0 +1,9 @@
+split,n_imgs,acc_obs_media,acc_ajustada
+TEST,103,0.5609,0.5613
+TEST,244,0.7383,0.7358
+TEST,869,0.7972,0.8057
+TEST,1738,0.8223,0.8159
+ajuste,a(assintota),0.8230,
+ajuste,b,96.4157,
+ajuste,c,1.2750,
+ganho_previsto_2x,N=3476,+0.0042,exploratorio
