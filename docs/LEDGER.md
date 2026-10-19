@@ -41,3 +41,7 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 - Correções aplicadas: variantes RQ3 alinhadas à Tabela 2 (sem braço NWD loss+assigner), frase dos 44 px, "nunca excede", título da seção de dados, notas do bib, limitações ampliadas, "cinco classificadores (quatro backbones)".
 - Revisor independente (Sonnet): nota 3/5, confiança 3, 0 fatais, 6 majors (vazamento/teste pequeno, confusão quantidade×qualidade na escada, teto de identificação interpretativo, cascata estreita, RQ3 sem tuning/seeds instáveis, novidade modesta/release indefinido). Revisão em `docs/reviews/round-03/review.md`.
 - Rodadas 2 e 3 ambas 3/5 → platô de 2 rodadas; majors restantes exigem novos dados/experimentos (proibidos). Loop encerrado conforme `docs/PLANO_LOOP_REVISAO.md`.
+
+## 2026-10-19 — Rodada 5 (loop retomado por diretriz do autor: só parar ao atingir a nota)
+- Revisor independente (Sonnet): 2/5 (conf. 3), 0 fatais, 6 majors (`docs/reviews/round-05/review.md`). Majors dependentes de experimento: split por placa (sem ID de placa), origem dos rótulos/auditoria de erros confiantes (especialista), controle de mesmo tamanho completo (nó ovx fora do ar), variantes de cascata (margem, relabel só entre espécies, fusão com score), validação da explicação do RQ3.
+- Texto corrigido: abstract enxuto, contradição "controle não rodado", "15 classificadores oráculo", ArcFace/SupCon, classificador principal (CE controle; parts escolhido na VAL).
