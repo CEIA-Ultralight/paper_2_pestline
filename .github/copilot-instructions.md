@@ -4,6 +4,7 @@ Repositório de **experimentos + manuscrito** do paper 2 do projeto Pestline (VI
 Leia `README.md` (tese, RQs, layout) antes de agir. Responda em **português**.
 
 ## Cluster (violação = penalidade financeira)
+- **Regras globais do cluster para todo agente: `AGENTS.md` (raiz) — leitura obrigatória.**
 - **GPU só via Slurm** (`sbatch`, partição `b200n1`, Apptainer `/raid/user_marcospaulo/containers/flydet-train-b200.sif` (o `flydet-train.sif` cu124 não roda em Blackwell)). Nunca `python`/`torchrun` com GPU no login node.
 - **Nada na home**: datasets, checkpoints, caches (uv, HF, torch, wandb) ficam em `/raid/user_marcospaulo/`.
 - Jobs com `save_period`, `resume` e `--signal=B:SIGUSR1@300` (manutenções cancelam sem aviso).

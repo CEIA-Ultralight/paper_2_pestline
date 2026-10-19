@@ -62,8 +62,8 @@ PY_PATH="${REPO}/rq3_tiny_object:${REPO}/rq3_tiny_object/patches:${REPO}/rq2_cas
 
 b200_guard() {
     : "${SLURM_JOB_ID:?Requer sbatch (GPU so via Slurm)}"
-    if [[ "${SLURM_JOB_PARTITION:-}" != "b200n1" ]]; then
-        echo "ABORT: particao ${SLURM_JOB_PARTITION:-?} != b200n1" >&2; exit 2
+    if [[ "${SLURM_JOB_PARTITION:-}" != "${FLYDET_PARTITION:-b200n1}" ]]; then
+        echo "ABORT: particao ${SLURM_JOB_PARTITION:-?} != ${FLYDET_PARTITION:-b200n1}" >&2; exit 2
     fi
     [[ -f "${IMAGE}" ]] || { echo "ABORT: container ausente: ${IMAGE} (ver common/containers/flydet-train-b200.def)" >&2; exit 2; }
     [[ -f "${DATA_YAML}" ]] || { echo "ABORT: data.yaml ausente: ${DATA_YAML}" >&2; exit 2; }

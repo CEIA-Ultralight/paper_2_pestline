@@ -12,7 +12,7 @@ RQ1 dados (fora desta campanha), RQ2 cascata detector→classificador, RQ3 tiny-
   Use o corpo do arquivo como prompt ao desempenhar o papel; nomes de modelo no frontmatter são do Copilot, ignore.
 - `.github/copilot-instructions.md`: cadeia de custódia e diretórios de escrita por agente (corrigido para B200/`main`; em conflito, vale este arquivo).
 
-## Cluster — regras OBRIGATÓRIAS (fonte: `docs/cluster/orientacoes_cluster_HPC.pdf`)
+## Cluster — regras OBRIGATÓRIAS (fonte: `docs/cluster/orientacoes_cluster_HPC.pdf`; versão para qualquer agente: `AGENTS.md`)
 Violação = bloqueio automático de acesso + penalidade financeira.
 - **Tudo via Slurm** (`sbatch`, monitorar com `squeue -u $USER`, cancelar com `scancel`). Proibido rodar GPU direto (`python`, `torchrun`, `docker`, `apptainer --nv`) no login node.
 - Partição = a do nó onde estão os dados: aqui `b200n1` (dgx-B200-1; `/raid` é local ao nó). `sinfo -p b200n1` antes de submeter (`idle`/`mix` aceitam jobs; `alloc` não).
