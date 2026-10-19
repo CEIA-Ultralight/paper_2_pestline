@@ -65,3 +65,38 @@ Sem Slurm: fila no host (`rq3_tiny_object/dgx1/run_queue.sh`, GPU 0) → Docker 
 | 2026-10-15 | idem | idem | idem | 2 | E10 NWD | c95mmtxv / yn14rd8t | COMPLETED (74 ép., best 44, 2,22 h) | idem |
 
 Notas (2026-10-16): todos com early stop (patience 30); fila inteira ≈ 14,2 h (16h33 de 14/out → 06h56 de 15/out). Smoke `smoke_E0` (oy267n1h / 2tdjry06) não entra em CSV. Runs inválidos no W&B (TEST incompleto, sem HEIC): `kean52sk`, `qlsyy0r4`. Gerador: `common/analysis/rq3_v9_dgx1_analysis.py <runs> <logs> rq3_tiny_object/results`.
+
+## Campanha ovx (L40S 46 GB) — RQ3 no DS-F2_v9.0.5 (2026-10-17/)
+
+Slurm `ovx01` (`rq3_tiny_object/ovx/ovx_queue.sbatch` → Apptainer `pestline-rq3.sif`, torch 2.6.0+cu124, ultralytics 8.4.142) → `dgx1/train_one.sh`. Filas: A = job 3395, B = job 3396. Dataset com as 83 HEIC convertidas para PNG (smoke job 3394: n_gt=3494). W&B `pestline/paper2_rq3`. Saídas em `~/pestline_rq3/runs/<run>/` (fora do repo).
+
+| Data | Job | Seed | Config | Estado | CSV |
+|---|---|---|---|---|---|
+| 2026-10-18 | 3396 (fila B) | 0 | E20 Wise-IoU v3 (scope=loss) | COMPLETED (1,57 h treino + TEST eval, DONE) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 0 | E0 baseline (controle desta máquina) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 1 | E20 Wise-IoU v3 (scope=loss) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 1 | E0 baseline (controle desta máquina) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 2 | E20 Wise-IoU v3 (scope=loss) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 2 | E0 baseline (controle desta máquina) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 0 | E11 GCD w=0.5 | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 0 | E21 imgsz 2560 (batch 4) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 1 | E11 GCD w=0.5 | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 1 | E21 imgsz 2560 (batch 4) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 2 | E11 GCD w=0.5 | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 0 | E14 NWD+RFLA | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 0 | E14 NWD+RFLA — nota | early stopping na época 40/150 (patience 30; best.pt ~ép. 10, results.csv com 40 linhas); não é crash | verificar na análise (analyst) |
+| 2026-10-18 | 3395 (fila A) | 1 | E14 NWD+RFLA — nota | DIVERGIU: cls_loss ~2150 desde ép. 27 e loss nan na ép. 30 (s0 também instável: parou na ép. 40); receita E0 mantida, sem retry; best.pt = época pré-divergência | reportar como resultado negativo/instável (analyst) |
+| 2026-10-18 | 3395 (fila A) | 1 | E14 NWD+RFLA | COMPLETED (DONE, TEST eval); Traceback inócuo na thread de plot (caixas inválidas pós-divergência) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 2 | E21 imgsz 2560 (batch 4) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 2 | E14 NWD+RFLA | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 0 | E22 YOLO11m (single-seed) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 0 | E15 NWD scope=loss | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 0 | E1 P2 (head P2) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 1 | E15 NWD scope=loss | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 1 | E1 P2 (head P2) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3396 (fila B) | 2 | E15 NWD scope=loss | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18/19 | 3396 (fila B) | 0 | E16 NWD scope=assigner | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18/19 | 3396 (fila B) | 1 | E16 NWD scope=assigner | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18/19 | 3396 (fila B) | 2 | E16 NWD scope=assigner | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3395 (fila A) | 2 | E1 P2 (head P2) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
+| 2026-10-18 | 3433 (inferência) | 0,1,2 | SAHI (tile 512, ov 0.25) + TTA vanilla/aug + WBF ensemble dos 3 E0 | COMPLETED (DONE, TEST) | pendente (analyst) |

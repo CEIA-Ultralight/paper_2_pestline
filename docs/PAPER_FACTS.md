@@ -354,3 +354,26 @@ Fonte: `rq1_data/results/{ablation_ladder,ablation_ladder_summary,ladder_*}.csv`
 - Latência do detector (V100, FP32, 1920): E0 42,4 ± 1,0 ms/img; E10 43,0 ± 0,1 (NWD não muda a inferência).
 - **Leitura:** reproduz a §9.1 (B200, v8.1.1: Δ macro-F1 +0,8 ± 1,5, sem efeito) no dataset do paper: **NWD não melhora a identificação de espécie** (Δ < std em todas as métricas de TEST, 0/3 McNemar) e **piora a localização fina no VAL** (mAP50:95 −1,7 ± 0,4, mesmo sinal da B200 −0,9 ± 0,5). Único efeito por espécie com |média| > std: recall MV +4,6 ± 0,7 (sem correção para múltiplas comparações; 4 espécies × várias métricas → exploratório). A variância entre seeds do E0 (macro-F1 std 2,6) é maior que o efeito.
 - **Não rodado no v9:** GCD, P2, RFLA, ablações loss/assigner, SAHI — para esses, só existe a §9 (B200, v8.1.1).
+
+## 13. RQ3 no DS-F2_v9.0.5 — campanha ovx (L40S; E0 + 8 variantes de tiny-object; **TEST, multi-seed 0/1/2**, exceto E22; gerado em 2026-10-19)
+**Campanha separada** (ovx-l40s-01, Slurm `ovx01`, Apptainer ultralytics 8.4.142, torch 2.6.0+cu124): E0 desta campanha é o único controle válido para as variantes abaixo (não misturar com E0 da §10 nem da §12). Receita idêntica ao E0 (yolo26m, 150 ép., batch 8, imgsz 1920, patience 30; E21 batch 4). TEST = 73 imgs, n_gt=3494. Fonte: `rq3_tiny_object/results/v9_ovx_{runs,summary,size_bins,paired,sahi_tta}.csv` (geradores `common/analysis/rq3_v9_analysis.py`, `common/analysis/rq3_ovx_infer_csv.py`); jobs em `runs.md`. Nota: o best.pt foi escolhido em VAL (VAL não é held-out); todos os números abaixo são TEST.
+
+| Braço (n seeds) | Acurácia espécie (média ± std) | Δ vs E0 pareado [IC95 bootstrap por imagem] | p Holm | Recall <32 px | 32–48 | ≥48 |
+|---|---:|---|---:|---:|---:|---:|
+| E0 controle (3) | 0,817 ± 0,012 | — | — | 79,4 | 81,0 | 89,4 |
+| E11 GCD (3) | 0,815 ± 0,004 | −0,002 [−0,018; +0,016] | 1,00 | 78,3 | 80,5 | 92,3 |
+| E14 NWD+RFLA (3) | 0,729 ± 0,075 | **−0,088 [−0,127; −0,049]** | 0,002 | 63,3 | 78,5 | 90,0 |
+| E1 P2 (3) | 0,790 ± 0,027 | −0,028 [−0,050; −0,004] | 0,139 | 74,0 | 80,1 | 91,0 |
+| E20 Wise-IoU v3 (3) | 0,814 ± 0,010 | −0,003 [−0,019; +0,015] | 1,00 | 78,9 | 79,6 | 91,4 |
+| E21 imgsz 2560 (3) | 0,780 ± 0,033 | −0,038 [−0,061; −0,011] | 0,057 | 72,8 | 79,3 | 90,0 |
+| E15 NWD scope=loss (3) | 0,793 ± 0,034 | −0,025 [−0,045; −0,005] | 0,084 | 74,0 | 80,8 | 91,3 |
+| E16 NWD scope=assigner (3) | 0,820 ± 0,019 | +0,003 [−0,014; +0,024] | 1,00 | 79,4 | 80,6 | 91,7 |
+| E22 YOLO11m (**single-seed s0**, exploratório) | 0,810 | −0,012 [−0,044; +0,021] | 1,00 | 76,3 | 83,0 | 90,5 |
+
+- **Resultado geral: nenhuma variante melhora o E0** (nenhum Δ positivo significativo). Recall por tamanho: Δ <32 px ≤ 0 em todas (E16 = 0,0); ganhos em ≥48 px (+0,6 a +2,9) vêm com std alto (1–5 pp) e não são inferência.
+- **Equivalentes ao E0 (|Δ|<1 pp, TOST ±1 pp)**: o IC95 de E11, E20 e E16 (meia-largura ≈1,6–1,9 pp) é mais largo que a margem — **não equivalência demonstrada; apenas sem diferença detectável** com 73 imgs/3 seeds.
+- **E14 (NWD+RFLA) é negativo e instável**: s0 early stop na ép. 40 (best ≈ ép. 10); **s1 divergiu** (cls_loss ~2150 desde ép. 27, nan na ép. 30; receita mantida, sem retry); recall <32 px 63,3 ± 14,1. Reportar como resultado negativo/instável, com Δ por seed.
+- **E21 (2560) e E1 (P2) pioram** o recall <32 px (−6,6 e −5,4 pp) apesar de mais resolução/escala; com Holm só E14 sobrevive a 5 % (E21 p=0,057).
+- **Escopo do NWD**: assigner (E16) ≈ E0 (+0,3 pp), loss (E15) −2,5 pp [−4,5; −0,5], loss+assigner+RFLA (E14) −8,8 pp → o dano vem da perda NWD e do RFLA, não do assigner.
+- **Inferência nos 3 E0 (TEST; `v9_ovx_sahi_tta.csv`; protocolos distintos, não comparar entre si)**: SAHI tile 512/ov 0,25 (sahi_inference, 7 classes, conf 0, IoU 0,5): recall 86,7 ± 1,8 % vs 35,5 ± 0,9 % do frame inteiro a 512 px (plain) e mAP50 69,5 ± 0,8 vs 9,5 ± 1,0 — **o plain a 512 não é baseline justo** (downscale); o baseline justo é o E0 a 1920 (mAP50 vanilla 84,2 ± 0,5; mAP50:95 61,7 ± 0,1). TTA (flip/escala) 1920: mAP50 84,6 ± 0,2 (+0,4), mAP50:95 62,2 ± 0,1 (+0,5) — ganho pequeno, 3 seeds, single-split. WBF ensemble dos 3 E0: mAP50 83,6 (< vanilla médio 84,2: **sem ganho**; calculado em conf 0,001).
+- **Não rodado nesta campanha**: E10 NWD (ver §12, V100), E7 yolo26l, E22 s1/s2.

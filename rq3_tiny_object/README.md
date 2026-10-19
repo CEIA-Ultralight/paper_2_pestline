@@ -55,3 +55,7 @@ e chama o trainer do `fly_det`. Testes: `../tests/test_nwd_patch.py` (7 testes C
 ## Saídas esperadas em `results/`
 
 - `nwd_sweep_single_seed.csv` (o que já existe acima), `nwd_3x3.csv`, `recall_by_size.csv`, `sahi_tta.csv`.
+
+## Status 2026-10-19 — campanha ovx (L40S) concluída
+E0 + E11 GCD, E14 NWD+RFLA, E1 P2, E20 WIoU, E21 2560, E15/E16 (escopo NWD) × 3 seeds, E22 YOLO11m s0 (single-seed), SAHI/TTA/WBF nos 3 E0 — todos TEST.
+Resultado: **nenhuma variante melhora o E0**; E14 negativo/instável (−8,8 pp, s1 divergiu). CSVs: `results/v9_ovx_{runs,summary,size_bins,paired,sahi_tta}.csv`; números em `docs/PAPER_FACTS.md` §13. Não rodado: E10 aqui, E7, E22 s1/s2. Pendente do autor: figuras e texto do manuscrito (`manuscript/` não editado).
