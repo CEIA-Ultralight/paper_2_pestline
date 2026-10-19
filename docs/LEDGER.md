@@ -45,3 +45,8 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 ## 2026-10-19 — Rodada 5 (loop retomado por diretriz do autor: só parar ao atingir a nota)
 - Revisor independente (Sonnet): 2/5 (conf. 3), 0 fatais, 6 majors (`docs/reviews/round-05/review.md`). Majors dependentes de experimento: split por placa (sem ID de placa), origem dos rótulos/auditoria de erros confiantes (especialista), controle de mesmo tamanho completo (nó ovx fora do ar), variantes de cascata (margem, relabel só entre espécies, fusão com score), validação da explicação do RQ3.
 - Texto corrigido: abstract enxuto, contradição "controle não rodado", "15 classificadores oráculo", ArcFace/SupCon, classificador principal (CE controle; parts escolhido na VAL).
+
+## 2026-10-19 — Controle de mesmo tamanho RQ1 completo (H100)
+- Job 34950 (h100n2, 4 treinos, ~55 min): EQ869_s2 0,806; EQ103 0,754±0,007 (3 seeds). Dados do DS-F2_v9.0.5 recarregados em `/raid/user_marcospaulo/datasets` (zip); GPU isolada por `common/gpu/` (jail+watch), sem violação.
+- Resultado: a 244 e 869 imagens L1/L2 ≈ subamostras do L3 (quantidade); a 103 imagens, aleatório do L3 (0,754) ≫ L0 (0,561): o degrau L0 NÃO é só quantidade. O texto "mostly quantity" do manuscrito precisa ser restringido (L1/L2) — a atualizar em manuscript_snapshot/ (resultado negativo para a hipótese "só quantidade" mantido).
+- Pendente: variantes da cascata (checkpoints E0/classificadores só na B200), NWD em entrada reduzida, AI-use e token Overleaf (autor).
