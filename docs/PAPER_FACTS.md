@@ -385,3 +385,14 @@ Fonte: `rq1_data/results/equalsize_summary.csv`; gerador `common/analysis/rq1_eq
 - **Escopo do NWD**: assigner (E16) ≈ E0 (+0,3 pp), loss (E15) −2,5 pp [−4,5; −0,5], loss+assigner+RFLA (E14) −8,8 pp → o dano vem da perda NWD e do RFLA, não do assigner.
 - **Inferência nos 3 E0 (TEST; `v9_ovx_sahi_tta.csv`; protocolos distintos, não comparar entre si)**: SAHI tile 512/ov 0,25 (sahi_inference, 7 classes, conf 0, IoU 0,5): recall 86,7 ± 1,8 % vs 35,5 ± 0,9 % do frame inteiro a 512 px (plain) e mAP50 69,5 ± 0,8 vs 9,5 ± 1,0 — **o plain a 512 não é baseline justo** (downscale); o baseline justo é o E0 a 1920 (mAP50 vanilla 84,2 ± 0,5; mAP50:95 61,7 ± 0,1). TTA (flip/escala) 1920: mAP50 84,6 ± 0,2 (+0,4), mAP50:95 62,2 ± 0,1 (+0,5) — ganho pequeno, 3 seeds, single-split. WBF ensemble dos 3 E0: mAP50 83,6 (< vanilla médio 84,2: **sem ganho**; calculado em conf 0,001).
 - **Não rodado nesta campanha**: E10 NWD (ver §12, V100), E7 yolo26l, E22 s1/s2.
+
+## 11c. Composição do treino por lote (DS-F2_v9.0.5) — rodada 6, M5
+Fonte: `rq1_data/results/ladder_composition.csv` (gerador `common/analysis/ladder_composition.py`).
+| lote | originais | aug. de imagem | reais | copy-paste |
+|---|---|---|---|---|
+| v5.1 | 58 | 45 | 103 | 103 |
+| v6.0 | 66 | 5 | 71 | 71 |
+| v7 | 56 | 14 | 70 | 70 |
+| v8 | 80 | 172 | 252 | 252 |
+| v9 | 139 | 234 | 373 | 373 |
+L0=103; L1=103+71+70=244; L2=244+252+373=869; L3=1738 = L2 + 869 copy-paste (um por imagem real). Os "97, 83, 70, 100, 174 imagens por lote" do texto antigo não tinham rastro e foram substituídos. **Inconsistência:** §14 (linha ~308) diz "607 de copy-paste"; a contagem por nome de arquivo dá 869 — o 607 não é usado no manuscrito e deve ser revisto antes de citar.

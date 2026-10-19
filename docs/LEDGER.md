@@ -50,3 +50,9 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 - Job 34950 (h100n2, 4 treinos, ~55 min): EQ869_s2 0,806; EQ103 0,754±0,007 (3 seeds). Dados do DS-F2_v9.0.5 recarregados em `/raid/user_marcospaulo/datasets` (zip); GPU isolada por `common/gpu/` (jail+watch), sem violação.
 - Resultado: a 244 e 869 imagens L1/L2 ≈ subamostras do L3 (quantidade); a 103 imagens, aleatório do L3 (0,754) ≫ L0 (0,561): o degrau L0 NÃO é só quantidade. O texto "mostly quantity" do manuscrito precisa ser restringido (L1/L2) — a atualizar em manuscript_snapshot/ (resultado negativo para a hipótese "só quantidade" mantido).
 - Pendente: variantes da cascata (checkpoints E0/classificadores só na B200), NWD em entrada reduzida, AI-use e token Overleaf (autor).
+
+## 2026-10-19 — Rodada 6 (revisor independente): 3/5, confiança 4, 0 fatais, 6 majors
+- M1 sem contribuição positiva; M2 cascata com receita única (margem 75%, sem fusão com score real); M3 TEST pequeno/sem ID de placa; M4 RQ3 sem tuning e NWD+RFLA instável; M5 composição L0–L3; M6 leituras de RQ1.
+- Feito: M5 (composição reconstruída, CSV + PAPER_FACTS §11c, texto corrigido; L3 = L2 + 869 copy-paste). Texto de RQ1 já restrito a L1/L2. 12 páginas.
+- Pendente (precisa de experimento/autor): M2 (variantes da cascata; checkpoints E0 só na B200), M4 (reposicionar NWD+RFLA como instabilidade; experimento de entrada reduzida), M3 (limite), título/conclusão "com esta receita".
+- Nota: o texto diz que o rótulo da espécie vem de etiqueta manuscrita na placa (v6.0 em diante) — confirmar com o autor.
