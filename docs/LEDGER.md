@@ -56,3 +56,6 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 - Feito: M5 (composição reconstruída, CSV + PAPER_FACTS §11c, texto corrigido; L3 = L2 + 869 copy-paste). Texto de RQ1 já restrito a L1/L2. 12 páginas.
 - Pendente (precisa de experimento/autor): M2 (variantes da cascata; checkpoints E0 só na B200), M4 (reposicionar NWD+RFLA como instabilidade; experimento de entrada reduzida), M3 (limite), título/conclusão "com esta receita".
 - Nota: o texto diz que o rótulo da espécie vem de etiqueta manuscrita na placa (v6.0 em diante) — confirmar com o autor.
+
+## 2026-10-19 — Variantes da cascata (M2) sem GPU
+- Checkpoints E0 e classificadores copiados da B200 (ssh, só leitura) para /raid/user_marcospaulo/flydet_runs_v9; jsonl da matriz também. `rq2_cascade_variants.py`: relabel só-espécies 4 NÃO ajuda (−1,4 pp); fusão tardia com score do detector dá +1,3 pp [+0,3;+2,3] no TEST, 9/9 pares (primeiro resultado positivo da cascata; w escolhido na VAL). Margem de crop (0%/25%) ainda por fazer (precisa retreinar classificador).

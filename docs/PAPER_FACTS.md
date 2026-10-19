@@ -396,3 +396,8 @@ Fonte: `rq1_data/results/ladder_composition.csv` (gerador `common/analysis/ladde
 | v8 | 80 | 172 | 252 | 252 |
 | v9 | 139 | 234 | 373 | 373 |
 L0=103; L1=103+71+70=244; L2=244+252+373=869; L3=1738 = L2 + 869 copy-paste (um por imagem real). Os "97, 83, 70, 100, 174 imagens por lote" do texto antigo não tinham rastro e foram substituídos. **Inconsistência:** §14 (linha ~308) diz "607 de copy-paste"; a contagem por nome de arquivo dá 869 — o 607 não é usado no manuscrito e deve ser revisto antes de citar.
+
+## 11d. Variantes da cascata (pós-processamento, CPU) — rodada 6, M2
+Fonte: `rq2_cascade/results/v9_cascade_variants{,_summary}.csv`; gerador `common/analysis/rq2_cascade_variants.py`; entradas `per_image_preds.jsonl` de `cascade_cross_{val,test}` (E0 s0–2 × CE s42/84/126 = 9 pares, copiadas da B200; avaliação original na B200). **Sem GPU nova; multi-seed (9 pares não independentes); w escolhido na VAL (que também escolheu os best.pt) e aplicado ao TEST.**
+Acurácia de espécie (all-GT), TEST, média dos 9 pares: single 0,8223; cascata (relabel total) 0,8135 (Δ −0,9 pp, IC95 imagem [−2,9; +1,2]); **species4** (reclassifica só propostas de espécie entre as 4) 0,8079 (Δ −1,4 pp [−2,9; +0,1]); **fusão tardia** w=0,55: 0,8353 (**Δ +1,3 pp, IC95 [+0,3; +2,3], 9/9 pares > single**); fusão restrita às 4 espécies (w=0,70): 0,8226 (Δ +0,0 pp [−0,03; +0,1]).
+Fusão: argmax_c [w·conf_det·1(c=classe_det) + (1−w)·p_clf(c)]; o head end-to-end só expõe classe top-1 e score (não a distribuição completa). VAL: fuse +0,2 pp (5/9 pares) — o ganho é maior no TEST que na VAL, não é "selecionado por overfit de VAL" mas o w foi escolhido nela.
