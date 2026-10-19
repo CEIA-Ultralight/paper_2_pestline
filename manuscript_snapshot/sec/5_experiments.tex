@@ -52,7 +52,7 @@ MV$\to$MC, localized (\%) & 14.8 & 8.0 & 6.3 & 6.3 & 5.4 \\
 \end{table}
 
 \paragraph{Quantity versus targeting.}
-Random subsamples of L3 reach $0.752\pm0.077$ at 244 images (L1: $0.738\pm0.004$) and $0.797\pm0.006$ at 869 images (L2: $0.797\pm0.015$). At these sizes the targeted sets are therefore not distinguishable from random subsets of the final data: the rise up to L2 is explained mostly by the number of images, and the targeted collections show no measurable advantage on this metric (244-image subsamples vary from 0.69 to 0.84 across seeds, so only a large effect would be visible).
+Random subsamples of L3 reach $0.752\pm0.077$ at 244 images (L1: $0.738\pm0.004$) and $0.800\pm0.007$ at 869 images (L2: $0.797\pm0.015$), three seeds each. The targeted sets are thus indistinguishable from random subsets of the final data: up to L2 the rise is mostly the number of images (244-image subsamples vary from 0.69 to 0.84 across seeds, so only a large effect would be visible). At 103 images the picture reverses: a random subsample of L3 reaches $0.754\pm0.007$, 19\,pp above L0 ($0.561$). The L0 deficit is thus not only quantity; the control cannot separate label quality from version.
 
 \paragraph{H2: identification does not move.}
 Figure~\ref{fig:rq1_confusion} shows the confusion among localized objects for L0 and L3. H2 is only partly supported. Among localized instances, MV$\to$MC confusion falls from 14.8\% (L0) to 5.4\% (L3) and MC$\to$MV from 18.5\% to 11.7\%; so part of what the earlier pipeline treated as a fixed limit moves with the training data. What remains is the point of Section~\ref{sec:exp:rq2v9}: with the best data MC$\to$MV is still 11.7\%. These are pooled point estimates without intervals.
@@ -65,7 +65,7 @@ Figure~\ref{fig:rq1_confusion} shows the confusion among localized objects for L
 \end{figure}
 
 \paragraph{Threats and what the result does not show.}
-The equal-size control is partial and shows only that no targeting effect is visible; the localized gains (small objects, insect-only plates) were not tested against it. L2+ORG$\to$L3 mixes copy-paste with removing the white-paper photographs (42\% of L2+ORG).  Crowded and insect-only rows rest on 7 and 6 plates (descriptive).
+The equal-size control shows only that no targeting effect is visible at L1 and L2; the localized gains (small objects, insect-only plates) were not tested against it. L2+ORG$\to$L3 mixes copy-paste with removing the white-paper photographs (42\% of L2+ORG).  Crowded and insect-only rows rest on 7 and 6 plates (descriptive).
 
 \subsection{RQ2 on DS-F2\_v9.0.5: Cascade, Oracle and the Identification Ceiling}
 \label{sec:exp:rq2v9}
