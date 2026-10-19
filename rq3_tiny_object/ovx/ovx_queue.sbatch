@@ -48,6 +48,7 @@ spec() {  # idem run_queue.sh
         E22_yolo11m_s0)            printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=off MODEL=yolo11m.pt ;;
         E1_p2_s[0-9])              printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=off MODEL=yolo26m.pt MODEL_CFG=yolo26m-p2.yaml ;;
         E7_yolo26l_s[0-9])         printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=off MODEL=yolo26l.pt ;;
+        EQ[0-9]*_s[0-9])           printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=off ;;
         smoke_E0)                  printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=off EPOCHS=1 PATIENCE=1 FLYDET_SAVE_PERIOD=1 ;;
         *) return 1 ;;
     esac
@@ -61,12 +62,13 @@ trap on_signal USR1 TERM INT
 echo "OVX QUEUE inicio $(date) job=${SLURM_JOB_ID} node=$(hostname) gpu=${CUDA_VISIBLE_DEVICES:-?} RUNS=${RUNS}"
 for RUN in ${RUNS}; do
     if [[ -f "${RUNS_ROOT}/${RUN}/DONE" ]]; then echo "SKIP ${RUN}: DONE"; continue; fi
+    DR="${DATA_ROOT}"; [[ "${RUN}" != EQ* ]] || DR="${ROOT}/datasets/${RUN}"   # controle de mesmo tamanho: uma raiz por run
     envs=()
     while IFS= read -r kv; do envs+=(--env "${kv}"); done < <(spec "${RUN}")
     for v in BATCH IMGSZ EPOCHS PATIENCE WORKERS; do [[ -z "${!v:-}" ]] || envs+=(--env "${v}=${!v}"); done
     echo "########## $(date '+%F %T') ${RUN} ##########"
     apptainer exec --nv --cleanenv --no-home \
-        --bind "${REPO}:${REPO}:ro" --bind "${DATA_ROOT}:${DATA_ROOT}" \
+        --bind "${REPO}:${REPO}:ro" --bind "${DR}:${DR}" \
         --bind "${RUNS_ROOT}:${RUNS_ROOT}" --bind "${MODELS_DIR}:${MODELS_DIR}" --bind "${CACHE}:${CACHE}" \
         --env WANDB_API_KEY="${WANDB_API_KEY}" \
         --env HOME="${CACHE}/home" --env YOLO_CONFIG_DIR="${CACHE}/ultralytics" \
@@ -74,7 +76,7 @@ for RUN in ${RUNS}; do
         --env MPLCONFIGDIR="${CACHE}/mpl" --env TORCH_HOME="${CACHE}/torch" --env XDG_CACHE_HOME="${CACHE}/xdg" \
         --env WANDB_ENTITY=pestline --env WANDB_PROJECT="${WANDB_PROJECT}" --env WANDB_MODE=online \
         --env WANDB_RUN_NAME="${RUN}" --env WANDB_TAGS="DS-F2_v9.0.5,paper2,ovx-l40s" \
-        --env REPO="${REPO}" --env DATA_ROOT="${DATA_ROOT}" --env RUNS_ROOT="${RUNS_ROOT}" --env MODELS_DIR="${MODELS_DIR}" \
+        --env REPO="${REPO}" --env DATA_ROOT="${DR}" --env RUNS_ROOT="${RUNS_ROOT}" --env MODELS_DIR="${MODELS_DIR}" \
         --env RUN_NAME="${RUN}" --env FLYDET_GPU_PARTITIONS=ovx01 --env FLYDET_RAID="${ROOT}" \
         --env SLURM_JOB_ID="${SLURM_JOB_ID}" --env SLURM_JOB_PARTITION=ovx01 \
         "${envs[@]}" \
