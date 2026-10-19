@@ -22,6 +22,12 @@ Violação = bloqueio automático de acesso + penalidade financeira.
 - Temporários só em `_scratch/` (git-ignored), nunca `/tmp`. **Nunca reduzir a resolução do dataset** (1920×1080).
 - W&B entity `pestline`; credenciais só via `set -a; source /raid/user_marcospaulo/secrets/wandb.env; set +a`. Nunca copiar a chave para o repo nem `--env`.
 
+## Monitoramento obrigatório (loop autônomo)
+- **Todo treino/job/build** (sbatch, apptainer build, avaliação, SAHI/TTA) tem um Monitor armado no momento em que é lançado. Sem monitor, não lançar.
+- O monitor cobre **fim e falha**: `DONE`/`CHAIN_*_DONE`/`FILA_OK`, estado Slurm terminal (`COMPLETED`, `FAILED`, `CANCELLED`, `TIMEOUT`, `OUT_OF_MEMORY`, `NODE_FAIL`, requeue rc 75) e padrões de erro no log (`Traceback`, `Error`, `OOM`, `CUDA out of memory`, `ABORT`, `FALHA`, `nan`). Também avisar se o log parar de crescer (job travado).
+- Ao receber o evento: ler o final do log, diagnosticar, corrigir (ex.: `BATCH=4` em OOM; ressubmeter o mesmo comando em requeue) e **seguir para o próximo passo da fila sem esperar o autor**. Só parar se travar de verdade (decisão do autor, regra de cluster, dado ausente) e então relatar.
+- Registrar o fim de cada run (runs.md/LEDGER) assim que o monitor avisar.
+
 ## Comandos
 - Testes (CPU): `_scratch/venv_tests/bin/python -m pytest tests -q` (referência: 125 passed, 25 skipped).
 - LaTeX: `cd manuscript && TECTONIC_CACHE_DIR=../_scratch/tectonic_cache tectonic -X compile main.tex --outdir _build`.

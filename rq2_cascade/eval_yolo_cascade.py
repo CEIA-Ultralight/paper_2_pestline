@@ -27,7 +27,7 @@ import time
 import traceback
 import uuid
 
-RAID = Path('/raid/user_marcospaulo')
+RAID = Path(os.environ.get('FLYDET_RAID', '/raid/user_marcospaulo'))   # FLYDET_RAID: raiz de dados em maquinas sem /raid (ex.: ovx)
 RUNS = RAID / 'flydet_runs'
 NIGHT = RUNS / 'architecture-night-v1-20260907'
 YOLO_CLASSES = ('MD', 'MV', 'MC', 'MF', 'INS', 'NOISE', 'MAR')
