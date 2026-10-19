@@ -36,3 +36,8 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 ## 2026-10-19 — Loop de revisão, rodada 1→2
 - Rodada 1 (revisor VISAPP, nota 2): corrigidos dataset/TODOs, números (1.210/73), anonimato e afirmações absolutas, limitações ampliadas, 16→12 páginas (tabelas de mapeamento RQ1, lotes, confusão e inferência RQ3 viraram prosa).
 - Pendente para o autor: conferir manualmente campos do main.bib (autores/volumes marcados antes como VERIFY, notas removidas da saída); pacbb2026 está como "Anonymous" na bib.
+
+## 2026-10-19 — Loop de revisão, rodada 3
+- Correções aplicadas: variantes RQ3 alinhadas à Tabela 2 (sem braço NWD loss+assigner), frase dos 44 px, "nunca excede", título da seção de dados, notas do bib, limitações ampliadas, "cinco classificadores (quatro backbones)".
+- Revisor independente (Sonnet): nota 3/5, confiança 3, 0 fatais, 6 majors (vazamento/teste pequeno, confusão quantidade×qualidade na escada, teto de identificação interpretativo, cascata estreita, RQ3 sem tuning/seeds instáveis, novidade modesta/release indefinido). Revisão em `docs/reviews/round-03/review.md`.
+- Rodadas 2 e 3 ambas 3/5 → platô de 2 rodadas; majors restantes exigem novos dados/experimentos (proibidos). Loop encerrado conforme `docs/PLANO_LOOP_REVISAO.md`.
