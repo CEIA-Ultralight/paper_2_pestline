@@ -158,13 +158,16 @@ def class_names(names):
     require(tuple(names) == YOLO_CLASSES, f'Unexpected YOLO class order: {names}')
 
 
+CROP_PAD = float(os.environ.get('FLYDET_CROP_PAD', '0.75'))  # margem de contexto por lado (paper: 0.75; ablacao: 0, 0.25)
+
+
 def padded_box(box, width=1920, height=1080):
     """Same int()/pad/clipping semantics as extract_crops.py, without min-size=8."""
     require(len(box) == 4 and all(math.isfinite(v) for v in box), 'Nonfinite/invalid box')
     x0, y0, x1, y1 = box
     if x1 <= x0 or y1 <= y0:
         return None
-    pw, ph = (x1 - x0) * .75, (y1 - y0) * .75
+    pw, ph = (x1 - x0) * CROP_PAD, (y1 - y0) * CROP_PAD
     crop = max(0, int(x0 - pw)), max(0, int(y0 - ph)), min(width, int(x1 + pw)), min(height, int(y1 + ph))
     return crop if crop[2] > crop[0] and crop[3] > crop[1] else None
 
@@ -348,7 +351,7 @@ def validate_metadata(metadata, head, source_sha):
     require(metadata['architecture']['variant'] == head and metadata['args']['variant'] == head, 'Variant mismatch')
     pre = metadata['preprocessing']
     require(pre['resize'] == [384, 384] and pre['interpolation'] == 'bilinear' and pre['antialias'] is True
-            and 'pad75' in pre['input'], 'Unsupported preprocessing/padding')
+            and 'pad' in pre['input'], 'Unsupported preprocessing/padding')
     norm = pre['normalization']
     require(len(norm['mean']) == len(norm['std']) == 3 and
             all(math.isfinite(x) for x in norm['mean'] + norm['std']) and min(norm['std']) > 0, 'Invalid normalization')
