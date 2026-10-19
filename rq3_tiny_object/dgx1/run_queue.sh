@@ -9,7 +9,11 @@
 #
 # Runs conhecidos (mesmos nomes das cadeias A/C da B200):
 #   E0_s{0,1,2}                 baseline yolo26m (sem patch)
-#   E10_nwd_w0.5_s{0,1,2}       NWD w=0,5 C=44 scope=both
+#   E10_nwd_w0.5_s{0,1,2}       NWD w=0,5 C=44 scope=both (LEGADO: NWD da loss em grid, saturado)
+#   E15_nwdfix_w0.5_s{0,1,2}    NWD w=0,5 C=44 scope=both com NWD da loss em PIXELS (correcao);
+#                               imprime [nwd_diag] nas 20 primeiras chamadas da loss
+#   E16_nwdpure_w1.0_px_s0      NWD PURO (w=1,0, sem CIoU) na loss e no assigner, loss em PIXELS;
+#                               refaz o E12 sem o bug (exploratorio, single-seed)
 #   E11_gcd_w0.5_s{0,1,2}       GCD w=0,5
 #   E10_nwd_w0.5_loss_s0        NWD so na loss
 #   E10_nwd_w0.5_assigner_s0    NWD so no assigner
@@ -48,7 +52,9 @@ spec() {
     local run="$1" s="${1##*_s}"
     case "${run}" in
         E0_s[0-9])                 printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=off ;;
-        E10_nwd_w0.5_s[0-9])       printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=both ;;
+        E10_nwd_w0.5_s[0-9])       printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=both FLYDET_NWD_LOSS_UNITS=grid ;;
+        E15_nwdfix_w0.5_s[0-9])    printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=both FLYDET_NWD_LOSS_UNITS=px FLYDET_NWD_DIAG=20 ;;
+        E16_nwdpure_w1.0_px_s0)    printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=both FLYDET_NWD_W=1.0 FLYDET_NWD_LOSS_UNITS=px FLYDET_NWD_DIAG=20 ;;
         E11_gcd_w0.5_s[0-9])       printf '%s\n' "FLYDET_SEED=${s}" FLYDET_NWD_MODE=gcd FLYDET_NWD_SCOPE=both ;;
         E10_nwd_w0.5_loss_s0)      printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=loss ;;
         E10_nwd_w0.5_assigner_s0)  printf '%s\n' FLYDET_SEED=0 FLYDET_NWD_MODE=nwd FLYDET_NWD_SCOPE=assigner ;;

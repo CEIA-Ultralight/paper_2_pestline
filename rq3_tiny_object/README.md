@@ -8,6 +8,13 @@ fatiada (SAHI) transferem para insetos de ~44 px em armadilhas adesivas com um d
 (AI-TOD, DOTA, VisDrone) com detectores anchor-based/two-stage; em YOLO26 E2E com objetos ~44 px o efeito
 fica dentro da variância entre seeds. Resultado negativo é publicável como tal.
 
+> **⚠️ 2026-10-18 — bug de unidade do NWD na loss (PAPER_FACTS §12.1).** O Ultralytics passa ao `BboxLoss.forward`
+> caixas em unidades de grid; com C = 44 o NWD da loss saturava (≈0,99). Todos os E10/E11(w=0,75)/E12 e a ablação
+> "NWD só loss" foram afetados (E10 = NWD só no assigner + CIoU ×0,5; colapso do E12 = artefato). Fix:
+> `FLYDET_NWD_LOSS_UNITS=px` (default `grid` = legado). Rerun na dgx1: `E15_nwdfix_w0.5_s{0,1,2}` e
+> `E16_nwdpure_w1.0_px_s0` (fila em `dgx1/FILA_RQ3_DGX1.md`). O estado atual da RQ3 está em PAPER_FACTS §12; esta
+> página tem partes desatualizadas.
+
 ## O que já temos (VAL mAP50, `results.csv` Ultralytics, protocolo idêntico, single-seed)
 
 > **Verificado no W&B em 2026-09-26** (`results/nwd_sweep_single_seed.csv`, `results/runs.md`): sob o protocolo

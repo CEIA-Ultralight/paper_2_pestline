@@ -21,6 +21,17 @@ export FLYDET_NWD_MODE="${FLYDET_NWD_MODE:-off}"
 export FLYDET_NWD_W="${FLYDET_NWD_W:-0.5}"
 export FLYDET_NWD_C="${FLYDET_NWD_C:-44.0}"
 export FLYDET_NWD_SCOPE="${FLYDET_NWD_SCOPE:-both}"
+export FLYDET_NWD_LOSS_UNITS="${FLYDET_NWD_LOSS_UNITS:-grid}"
+# E15/E16 existem para testar o NWD da loss em pixels: nunca rodar com a unidade legada nem com outro w.
+case "${RUN_NAME}" in
+    E15_*) WANT_W=0.5 ;;
+    E16_*) WANT_W=1.0 ;;
+    *)     WANT_W="" ;;
+esac
+if [[ -n "${WANT_W}" && ( "${FLYDET_NWD_LOSS_UNITS}" != "px" || "${FLYDET_NWD_W}" != "${WANT_W}" ) ]]; then
+    echo "ABORT: ${RUN_NAME} exige FLYDET_NWD_LOSS_UNITS=px e FLYDET_NWD_W=${WANT_W}" \
+         "(veio ${FLYDET_NWD_LOSS_UNITS} / ${FLYDET_NWD_W})"; exit 2
+fi
 export FLYDET_RFLA="${FLYDET_RFLA:-0}"
 export FLYDET_SAVE_PERIOD="${FLYDET_SAVE_PERIOD:-10}"
 export FLYDET_DATASET_ROOT="${DATA_ROOT}"
@@ -43,7 +54,7 @@ mkdir -p "${WORK}/models" "${WORK}/runs"
 echo "============================== ${RUN_NAME} =============================="
 echo "Receita: ${MODEL} epochs=${EPOCHS} batch=${BATCH} imgsz=${IMGSZ} patience=${PATIENCE} save_period=${FLYDET_SAVE_PERIOD}"
 [[ -z "${MODEL_CFG}" ]] || echo "Arquitetura: ${MODEL_CFG} (pretrained=${MODEL})"
-echo "Seed:    FLYDET_SEED=${FLYDET_SEED}  NWD: mode=${FLYDET_NWD_MODE} w=${FLYDET_NWD_W} C=${FLYDET_NWD_C} scope=${FLYDET_NWD_SCOPE} rfla=${FLYDET_RFLA}"
+echo "Seed:    FLYDET_SEED=${FLYDET_SEED}  NWD: mode=${FLYDET_NWD_MODE} w=${FLYDET_NWD_W} C=${FLYDET_NWD_C} scope=${FLYDET_NWD_SCOPE} loss_units=${FLYDET_NWD_LOSS_UNITS} rfla=${FLYDET_RFLA}"
 echo "W&B:     ${WANDB_ENTITY}/${WANDB_PROJECT} run=${WANDB_RUN_NAME}"
 echo "WORK:    ${WORK}   inicio=$(date)"
 echo "========================================================================="

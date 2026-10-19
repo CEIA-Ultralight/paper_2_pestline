@@ -111,3 +111,58 @@ Para ver o tempo real de cada treino:
 ```bash
 grep "Training finished" ~/pestline/logs/E*.log
 ```
+
+## Segunda fila: NWD corrigido (E15 + E16, 2026-10-18)
+
+Os `E10_nwd_w0.5_s*` da primeira fila tinham o NWD **da loss** em unidades de grid (saturado, ≈0,99). Só o NWD do assigner estava correto (`docs/PAPER_FACTS.md` §12.1). A segunda fila refaz o NWD com a loss em pixels.
+
+| Ordem | Run | O que é | Seed |
+|---|---|---|---|
+| 1 | `E15_nwdfix_w0.5_s0` | 0,5·CIoU + 0,5·NWD, loss em px | 0 |
+| 2 | `E15_nwdfix_w0.5_s1` | idem | 1 |
+| 3 | `E15_nwdfix_w0.5_s2` | idem | 2 |
+| 4 | `E16_nwdpure_w1.0_px_s0` | NWD puro (w = 1,0), loss em px; exploratório | 0 |
+
+**O que mudou no código**
+
+- `patches/nwd_patch.py`:
+  - `FLYDET_NWD_LOSS_UNITS=grid|px`. O default é `grid`, que reproduz os runs antigos.
+  - `FLYDET_NWD_DIAG=N` imprime `[nwd_diag]` nas N primeiras chamadas da loss.
+- `train_one.sh` aborta se um `E15_*` ou `E16_*` vier sem `px` ou com outro `w`.
+- `wait_and_run.sh` espera a GPU ficar livre e depois chama o `run_queue.sh`. "Livre" quer dizer nenhum `run_queue.sh` rodando e nenhum container `rq3-*-gpu0`. Os containers de outros usuários com `-gpu0` no nome são ignorados.
+
+### Soltar
+
+```bash
+cd ~/pestline/paper_2_pestline
+GPU=0 nohup bash rq3_tiny_object/dgx1/wait_and_run.sh \
+  E15_nwdfix_w0.5_s0 E15_nwdfix_w0.5_s1 E15_nwdfix_w0.5_s2 E16_nwdpure_w1.0_px_s0 \
+  > ~/pestline/logs/fila_e15_e16.log 2>&1 &
+```
+
+### Conferir que a correção está ativa (≈15 min depois de começar)
+
+```bash
+grep -E "^Seed:|nwd_diag" ~/pestline/logs/E15_nwdfix_w0.5_s0.log | head -6
+```
+
+Tem que aparecer:
+
+- `loss_units=px`;
+- linhas `[nwd_diag]` do treino, além da primeira, que vem do precheck com caixas falsas (`target_max_in=41.0`);
+- `target_max_in` até ~240, que é a unidade de grid que chega da loss;
+- `target_max_px` até 1920;
+- `nwd_mean` abaixo de ~0,95 e variando entre as linhas.
+
+Resultado em 18/out às 09:04, no `E15_nwdfix_w0.5_s0`: `target_max_in=240.0`, `target_max_px=1920.0`, `nwd_mean` 0,79–0,90 e 23,9 GB de memória.
+
+### Parar só esta fila
+
+```bash
+pkill -f wait_and_run.sh; pkill -f "run_queue.sh E1[56]"
+for c in $(docker ps --format '{{.Names}}' | grep -E '^rq3-E1[56]_'); do docker stop "$c"; done
+```
+
+### Tempo
+
+Os E0/E10 da primeira fila levaram 1,95–2,85 h cada, com early stop. A segunda fila deve levar **~10–12 h**, e o máximo, se nenhum treino parar cedo, é ~26 h.

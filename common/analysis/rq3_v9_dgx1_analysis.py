@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""RQ3 no DS-F2_v9.0.5 (campanha dgx1/V100) — E0 x NWD (E10, w=0,5, C=44, scope=both), seeds 0/1/2 (CPU).
+"""RQ3 no DS-F2_v9.0.5 (campanha dgx1/V100) — E0 x NWD (CPU).
+
+Variantes: E0 (s0-2); E10 = NWD w=0,5, C=44, scope=both com a loss em unidade de grid (legado, s0-2);
+E15 = idem com a loss em px (FLYDET_NWD_LOSS_UNITS=px, s0-2); E16 = NWD puro w=1,0 em px (s0, exploratorio).
+Cada variante e comparada com o E0 pareado por seed (PAPER_FACTS §12/§12.1).
 
 Le, por run, test_eval/<RUN>/single/label_only/{metrics.json,per_instance.csv} (harness eval_cascade_matrix:
 conf>=0,25, IoU>=0,5, matching class-agnostico) e o log do treino (<LOGS>/<RUN>.log: validacao final do best.pt
@@ -7,7 +11,7 @@ no VAL, best epoch, epocas, horas). Campanha separada da B200 (V100, torch 2.6+c
 
 Uso: python rq3_v9_dgx1_analysis.py <RUNS_ROOT> <LOGS_DIR> <OUT_DIR>
 Saidas (CSV em OUT_DIR): v9_dgx1_nwd_runs.csv (run x metricas), v9_dgx1_nwd_summary.csv (media/desvio por variante
-e delta pareado por seed), v9_dgx1_nwd_paired.csv (McNemar exato por seed + IC95 bootstrap por imagem),
+e delta pareado por seed vs E0), v9_dgx1_nwd_paired.csv (McNemar exato por seed + IC95 bootstrap por imagem, vs E0),
 v9_dgx1_nwd_size_bins.csv (recall de especie por tamanho, mesmos bins da RQ1/§9.1).
 """
 from __future__ import annotations
@@ -26,8 +30,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from stats import mcnemar_paired  # noqa: E402
 
 SPECIES = ["MD", "MV", "MC", "MF"]
-SEEDS = [0, 1, 2]
-VARIANTS = {"E0": "E0_s{s}", "E10_nwd": "E10_nwd_w0.5_s{s}"}
+# variante -> (padrao do run, seeds, rotulo curto usado nos deltas)
+VARIANTS = {"E0": ("E0_s{s}", [0, 1, 2], "E0"),
+            "E10_nwd": ("E10_nwd_w0.5_s{s}", [0, 1, 2], "E10"),
+            "E15_nwd_px": ("E15_nwdfix_w0.5_s{s}", [0, 1, 2], "E15"),
+            "E16_nwdpure_px": ("E16_nwdpure_w1.0_px_s{s}", [0], "E16")}
 BINS = [("<32", 0, 32), ("32-48", 32, 48), (">=48", 48, 1e9)]
 NBOOT = 10000
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
@@ -116,8 +123,8 @@ def main():
     root, logs, out = sys.argv[1:4]
     os.makedirs(out, exist_ok=True)
     met, rows = {}, {}
-    for var, pat in VARIANTS.items():
-        for s in SEEDS:
+    for var, (pat, seeds, _) in VARIANTS.items():
+        for s in seeds:
             run = pat.format(s=s)
             d = eval_dir(root, run)
             met[(var, s)] = {"run": run, **parse_log(os.path.join(logs, f"{run}.log")), **run_metrics(d)}
@@ -132,30 +139,40 @@ def main():
         + [fmt(met[(v, s)].get(k, "")) for k in keys] for (v, s) in sorted(met)])
 
     num = [k for k in keys if k not in ("run", "images", "gt_objects", "species_gt")]
+    def std(xs):  # E16 tem 1 seed: sem desvio
+        return f"{st.stdev(xs):.4f}" if len(xs) > 1 else ""
+
     summ = []
-    for v in VARIANTS:
+    for v, (_, seeds, _) in VARIANTS.items():
         for k in num:
-            xs = [met[(v, s)][k] for s in SEEDS]
-            summ.append([v, k, len(xs), f"{st.mean(xs):.4f}", f"{st.stdev(xs):.4f}", "|".join(fmt(float(x)) for x in xs)])
-    for k in num:
-        ds = [met[("E10_nwd", s)][k] - met[("E0", s)][k] for s in SEEDS]
-        summ.append(["delta_E10_menos_E0", k, len(ds), f"{st.mean(ds):+.4f}", f"{st.stdev(ds):.4f}",
-                     "|".join(f"{x:+.4f}" for x in ds)])
+            xs = [met[(v, s)][k] for s in seeds]
+            summ.append([v, k, len(xs), f"{st.mean(xs):.4f}", std(xs), "|".join(fmt(float(x)) for x in xs)])
+    for v, (_, seeds, short) in VARIANTS.items():
+        if v == "E0":
+            continue
+        for k in num:
+            ds = [met[(v, s)][k] - met[("E0", s)][k] for s in seeds]
+            summ.append([f"delta_{short}_menos_E0", k, len(ds), f"{st.mean(ds):+.4f}", std(ds),
+                         "|".join(f"{x:+.4f}" for x in ds)])
     wr(os.path.join(out, "v9_dgx1_nwd_summary.csv"), ["variant", "metric", "n_seeds", "mean", "std_ddof1", "por_seed"], summ)
 
     pr = []
-    for s in SEEDS:
-        a, b = rows[("E10_nwd", s)], rows[("E0", s)]
-        bm = {(r["image"], r["gt_index"]): r["ok"] for r in b}
-        m = mcnemar_paired([r["ok"] for r in a], [bm[(r["image"], r["gt_index"])] for r in a])
-        acc_a, acc_b = sum(r["ok"] for r in a) / len(a), sum(r["ok"] for r in b) / len(b)
-        pr.append([f"s{s}", len(a), f"{acc_a:.4f}", f"{acc_b:.4f}", f"{acc_a - acc_b:+.4f}", m["b"], m["c"],
-                   f"{m['p_value']:.3g}", "", "", ""])
-    dlt, lo, hi, nimg = boot_delta({s: rows[("E10_nwd", s)] for s in SEEDS}, {s: rows[("E0", s)] for s in SEEDS})
-    pr.append(["seeds_agrupadas", 3 * 1210, "", "", f"{dlt:+.4f}", "", "", "", f"{lo:+.4f}", f"{hi:+.4f}", nimg])
+    for v, (_, seeds, short) in VARIANTS.items():
+        if v == "E0":
+            continue
+        for s in seeds:
+            a, b = rows[(v, s)], rows[("E0", s)]
+            bm = {(r["image"], r["gt_index"]): r["ok"] for r in b}
+            m = mcnemar_paired([r["ok"] for r in a], [bm[(r["image"], r["gt_index"])] for r in a])
+            acc_a, acc_b = sum(r["ok"] for r in a) / len(a), sum(r["ok"] for r in b) / len(b)
+            pr.append([short, f"s{s}", len(a), f"{acc_a:.4f}", f"{acc_b:.4f}", f"{acc_a - acc_b:+.4f}", m["b"], m["c"],
+                       f"{m['p_value']:.3g}", "", "", ""])
+        dlt, lo, hi, nimg = boot_delta({s: rows[(v, s)] for s in seeds}, {s: rows[("E0", s)] for s in seeds})
+        pr.append([short, "seeds_agrupadas", len(seeds) * 1210, "", "", f"{dlt:+.4f}", "", "", "", f"{lo:+.4f}",
+                   f"{hi:+.4f}", nimg])
     wr(os.path.join(out, "v9_dgx1_nwd_paired.csv"),
-       ["seed", "n_gt_especie", "acc_E10", "acc_E0", "delta_acc", "mcnemar_b_E10certo_E0errado",
-        "mcnemar_c_E10errado_E0certo", "mcnemar_p_exato", "ic95_boot_img_lo", "ic95_boot_img_hi", "n_imagens"], pr)
+       ["variant", "seed", "n_gt_especie", "acc_variant", "acc_E0", "delta_acc", "mcnemar_b_variantcerto_E0errado",
+        "mcnemar_c_varianterrado_E0certo", "mcnemar_p_exato", "ic95_boot_img_lo", "ic95_boot_img_hi", "n_imagens"], pr)
 
     sz = []
     for (v, s), rs in sorted(rows.items()):

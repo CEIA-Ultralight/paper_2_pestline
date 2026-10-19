@@ -25,6 +25,18 @@ Configuracao por variaveis de ambiente (com defaults do E10):
   FLYDET_NWD_SCOPE (default both) — onde aplicar: "loss" (so BboxLoss.forward),
                                     "assigner" (so TaskAlignedAssigner.iou_calculation)
                                     ou "both" (E10). Ablacao E10-loss / E10-assigner.
+  FLYDET_NWD_LOSS_UNITS (default grid) — unidade das caixas no NWD da LOSS:
+                                    "grid" = LEGADO (E10/E11/E12/ablacoes ate 2026-10-16): o
+                                             ultralytics passa ao BboxLoss.forward caixas em
+                                             unidades de grid (pred_bboxes e target/stride), entao
+                                             C=44 vira 44 celulas (352/704/1408 px em P3/P4/P5) e o
+                                             NWD da loss satura (~0,99). Mantido so p/ reproduzir
+                                             os runs antigos.
+                                    "px"   = CORRETO (E15+): multiplica as caixas pelo stride antes
+                                             do NWD, igual ao assigner (que ja recebe pixels).
+                                    A CIoU e o assigner nao mudam (CIoU e invariante a escala).
+  FLYDET_NWD_DIAG (default 0)     — N>0 imprime, nas N primeiras chamadas da loss, o max do
+                                    target como chega e a media do NWD (diagnostico de unidade).
 
 Compativel com ultralytics 8.4.142 (assinaturas verificadas no container
 flydet-train.sif em 2026-09-21). Se a assinatura mudar, apply_nwd_patch
@@ -46,8 +58,12 @@ NWD_C = float(os.environ.get("FLYDET_NWD_C", "44.0"))
 NWD_MODE = os.environ.get("FLYDET_NWD_MODE", "nwd").strip().lower()
 VALID_MODES = ("nwd", "gcd", "wiou", "off")
 VALID_SCOPES = ("loss", "assigner", "both")
+VALID_LOSS_UNITS = ("grid", "px")
+NWD_LOSS_UNITS = "grid"
+NWD_DIAG = 0
 
 _PATCHED = False
+_diag_calls = 0
 
 # Wise-IoU v3 (Tong et al., arXiv:2301.10051): L = r * R_WIoU * (1 - IoU), r = beta / (delta * alpha**(beta - delta)),
 # beta = L_IoU / media_movel(L_IoU) (outlier degree, sem gradiente). So a loss de caixa (scope=loss).
@@ -95,6 +111,19 @@ def resolve_scope() -> str:
     return scope
 
 
+def resolve_loss_units() -> str:
+    """Le FLYDET_NWD_LOSS_UNITS e FLYDET_NWD_DIAG e sincroniza os globais (default: grid = legado)."""
+    global NWD_LOSS_UNITS, NWD_DIAG
+    units = os.environ.get("FLYDET_NWD_LOSS_UNITS", "grid").strip().lower()
+    if units not in VALID_LOSS_UNITS:
+        raise RuntimeError(
+            f"[nwd_patch] FLYDET_NWD_LOSS_UNITS invalido: {units!r} (use {'|'.join(VALID_LOSS_UNITS)})"
+        )
+    NWD_LOSS_UNITS = units
+    NWD_DIAG = int(os.environ.get("FLYDET_NWD_DIAG", "0"))
+    return units
+
+
 def nwd_similarity(boxes1: torch.Tensor, boxes2: torch.Tensor, constant: float) -> torch.Tensor:
     """NWD entre pares de caixas xyxy (pixels), shape (..., 4) -> (..., 1) em (0, 1].
 
@@ -135,13 +164,28 @@ def _patched_bbox_loss_forward(
 
     Corpo identico ao original; unica mudanca: a metrica de similaridade
     `iou` passa a ser a media ponderada (1-w)*CIoU + w*NWD.
+
+    pred_bboxes e target_bboxes chegam em unidades de grid (o v8DetectionLoss divide pelo
+    stride antes de chamar); `stride` tem shape (N_anchors, 1) e faz broadcast com (B, N, 4).
+    Com FLYDET_NWD_LOSS_UNITS=px o NWD e calculado em pixels, como no assigner.
     """
+    global _diag_calls
     weight = target_scores[fg_mask].sum(-1, keepdim=True)
-    if NWD_MODE == "wiou":
+    if NWD_MODE == "wiou":  # WIoU so usa razoes (IoU, dist/diag): invariante a escala, grid ou px tanto faz
         loss_iou = (wiou_v3_loss(pred_bboxes[fg_mask], target_bboxes[fg_mask]) * weight).sum() / target_scores_sum
     else:
         iou = bbox_iou(pred_bboxes[fg_mask], target_bboxes[fg_mask], xywh=False, CIoU=True)
-        nwd = tiny_similarity(pred_bboxes[fg_mask], target_bboxes[fg_mask])
+        if NWD_LOSS_UNITS == "px":
+            nwd = tiny_similarity((pred_bboxes * stride)[fg_mask], (target_bboxes * stride)[fg_mask])
+        else:
+            nwd = tiny_similarity(pred_bboxes[fg_mask], target_bboxes[fg_mask])
+        if _diag_calls < NWD_DIAG:
+            _diag_calls += 1
+            print(f"[nwd_diag] call={_diag_calls} loss_units={NWD_LOSS_UNITS} "
+                  f"target_max_in={target_bboxes[fg_mask].max().item():.1f} "
+                  f"target_max_px={(target_bboxes * stride)[fg_mask].max().item():.1f} "
+                  f"nwd_mean={nwd.mean().item():.4f} nwd_min={nwd.min().item():.4f} "
+                  f"ciou_mean={iou.mean().item():.4f} n_fg={int(fg_mask.sum())}", flush=True)
         iou = (1.0 - NWD_W) * iou + NWD_W * nwd
         loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
 
@@ -194,7 +238,9 @@ def apply_nwd_patch() -> dict:
         print("[nwd_patch] FLYDET_NWD_MODE=off — treino SEM patch (baseline)")
         return {"nwd": False, "nwd_mode": "off"}
     scope = "loss" if mode == "wiou" else resolve_scope()  # WIoU nao tem analogo no assigner
-    cfg = {"nwd": True, "nwd_w": NWD_W, "nwd_c": NWD_C, "nwd_mode": mode, "nwd_scope": scope}
+    units = resolve_loss_units()
+    cfg = {"nwd": True, "nwd_w": NWD_W, "nwd_c": NWD_C, "nwd_mode": mode, "nwd_scope": scope,
+           "nwd_loss_units": units}
     if _PATCHED:
         return cfg
 
@@ -219,7 +265,8 @@ def apply_nwd_patch() -> dict:
         TaskAlignedAssigner.iou_calculation = _patched_iou_calculation
         applied.append("TaskAlignedAssigner.iou_calculation")
     _PATCHED = True
-    print(f"[nwd_patch] modo={mode} scope={scope} w={NWD_W} C={NWD_C}px "
+    legacy = " (LEGADO: NWD da loss em grid, saturado)" if mode == "nwd" and units == "grid" and scope != "assigner" else ""
+    print(f"[nwd_patch] modo={mode} scope={scope} w={NWD_W} C={NWD_C}px loss_units={units}{legacy} "
           f"({' + '.join(applied)})")
     return cfg
 
