@@ -333,6 +333,12 @@ Fonte: `rq1_data/results/{ablation_ladder,ablation_ladder_summary,ladder_*}.csv`
 - H2 (confusão entre localizados, `ladder_confusion.csv`, seeds agrupadas): MC→MV 18,5% (L0) → 14,5% (L2) → 11,7% (L3); MV→MC 14,8% → 6,3% → 5,4%; MF→não-espécie 46% → 17% → 9%. **H2 (confusão inalterada) NÃO se sustenta integralmente**: MV↔MC cai, mas MC→MV persiste em ~12% em L3.
 - Ressalvas: L0 é pequeno (lote v5.1); quantidade e qualidade estão confundidas entre braços (controle de subamostra de L2 não rodado); L2ORG tem ORG≈42% do treino; cópia-e-cola só em L3 (L2→L3 mistura copy-paste + DS-ORG removido).
 
+### 11b. RQ1 — controle de mesmo tamanho (subamostras aleatórias do L3; TEST; receita E0; **PARCIAL**; 2026-10-19)
+Fonte: `rq1_data/results/equalsize_summary.csv`; gerador `common/analysis/rq1_equalsize.py`; subamostras `rq1_data/make_equalsize.py` (random.Random(1000*N+seed); seed de amostragem = seed de treino); fila `rq3_tiny_object/ovx/ovx_queue.sbatch` (L40S).
+- EQ244 (3 seeds): 0,7515±0,0766 (s0 0,6876; s1 0,8364; s2 0,7306) vs L1 0,738±0,004.
+- EQ869 (2 seeds, s2 pendente): 0,7971±0,0064 (s0 0,8017; s1 0,7926) vs L2 0,797±0,015.
+- EQ103 e EQ869_s2: não rodados (nó ovx fora do ar em 2026-10-19). Leitura: L1 e L2 não se distinguem de subamostras aleatórias do L3 do mesmo tamanho; a variância entre amostras/seeds (EQ244) é maior que o efeito. Não prova equivalência.
+
 ## 12. RQ3 no DS-F2_v9.0.5 — campanha dgx1/V100 (E0 × NWD, **multi-seed 0/1/2**; gerado em 2026-10-16)
 **Campanha separada** da B200 (§9/§10/§11): 1× V100 32 GB, Docker `pestline-rq3:cu124` (torch 2.6.0+cu124, ultralytics 8.4.142, fly_det b36580a); E0 aqui é o baseline **desta** campanha — não misturar com o E0 da §10 na mesma tabela. Receita E0 idêntica (yolo26m, 150 ép., batch 8, imgsz 1920, patience 30, `best.pt` na VAL); E10 = 0,5·CIoU + 0,5·NWD, C=44 px (medido no v8.1.1, não recalculado), scope=both. TEST 73 imgs / 3.494 GT / 1.210 de espécie (MD 224, MV 302, MC 268, MF 416), harness P2 (`eval_cascade_matrix`, conf ≥ 0,25, IoU ≥ 0,5, class-agnóstico). VAL 52 imgs / 2.359 GT (não held-out). 83 HEIC convertidas para PNG antes do treino (sem isso o TEST contava 2.980 GT). Fonte: `rq3_tiny_object/results/v9_dgx1_nwd_{runs,summary,paired,size_bins}.csv`; gerador `common/analysis/rq3_v9_dgx1_analysis.py`; runs em `rq3_tiny_object/results/runs.md`. Média ± desvio amostral (ddof=1); Δ = E10 − E0 pareado por seed.
 
