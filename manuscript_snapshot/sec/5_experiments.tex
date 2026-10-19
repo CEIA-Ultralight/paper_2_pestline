@@ -1,0 +1,135 @@
+\section{\uppercase{Experiments and Results}}
+\label{sec:experiments}
+
+% RQ1 from PAPER_FACTS section 11, RQ2 from sections 9-10 (B200), RQ3 from section 13 (L40S).
+
+Unless stated otherwise, ``TEST'' denotes the 73-image test split (1{,}210 species instances) and ``VAL'' the 52-image validation split; species metrics follow the fixed-threshold protocol of Section~\ref{sec:method:protocol} (score$\ge$0.25, IoU$\ge$0.5, micro-averaged over the four species). In Sections~\ref{sec:exp:rq2v9} and~\ref{sec:exp:rq3} detectors are trained with seeds 0--2 and cascade classifiers with seeds 42, 84 and 126 (the nine detector--classifier pairs of a configuration are crossed, not independent); values are mean$\pm$std over seeds and deltas are mean$\pm$std of paired differences (Section~\ref{sec:method:protocol}). Section~\ref{sec:exp:rq1} uses seeds 0--2 on the same TEST.
+
+\subsection{RQ1: Effect of Targeted Collections}
+\label{sec:exp:rq1}
+
+RQ1 asks what the targeted physical collections of Section~\ref{sec:dataset:collections} change in the single-stage detector---and what they leave untouched.
+
+\paragraph{Hypothesis.}
+\textbf{H1 (detection):} the collections repair the detection failures they target, so the gain is localized in the corresponding metrics : recall on small specimens (collections L0$\to$L1) and on crowded plates and species false positives on insect-only plates (L1$\to$L2). \textbf{H2 (identification):} among localized objects, the species confusion---in particular MC$\leftrightarrow$MV---does not change measurably.
+
+\paragraph{Protocol: a data ladder.}
+The earliest data version is not a subset of the final one, so we train on five cumulative sets built from the dataset versions, with a fixed VAL and TEST (those of v9.0.5): \textbf{L0}, the earliest lot (103 images); \textbf{L1}, L0 plus the next two versions (244); \textbf{L2}, L1 plus the two latest versions without copy-paste (869); \textbf{L2+ORG}, L2 plus single-species photographs on white paper (1{,}497); and \textbf{L3}, the full DS-F2\_v9.0.5 training split with copy-paste (1{,}738), whose runs are the E0 seeds of Section~\ref{sec:exp:rq2v9}.  All arms use the E0 recipe of Section~\ref{sec:method:single} with seeds 0--2 and the metrics of Section~\ref{sec:method:protocol}. Differences against L3 carry a 95\% bootstrap CI over test images (10{,}000 resamples, seeds pooled) and an exact McNemar test per seed. Size bins on $\sqrt{wh}$: $<$32, 32--48, $\ge$48\,px; a plate is crowded at $\ge$30 species instances (7 TEST plates); 6 contain only INS. Quantity and quality grow together along the ladder. To separate quantity, we add an equal-size control: random subsamples of the L3 training split with the size of L1 (244 images, three seeds) and of L2 (869 images, two seeds), each subsample drawn with the seed of its run.
+
+\paragraph{H1: detection improves where the collections aim.}
+Table~\ref{tab:rq1_ablation} gives the ladder. Species accuracy rises monotonically, $0.561\pm0.006$ (L0), $0.738\pm0.004$ (L1), $0.797\pm0.015$ (L2), $0.811\pm0.012$ (L2+ORG), $0.822\pm0.016$ (L3), and plain detection recall (class ignored) rises from 0.923 to 0.977. Recall on objects below 32\,px goes from 44\% to 81\%, and species false positives on the six insect-only plates fall from 66--87 (L0) and 43--57 (L1) per seed to 0 in L2 and L3 (at most 3 in L2+ORG). Recall on crowded plates goes from 59\% to 84\%. Against L3, L0 and L1 are worse ($\Delta=-0.261$ [$-0.335$, $-0.189$] and $-0.084$ [$-0.123$, $-0.049$]). L2 is $-0.025$ [$-0.048$, $-0.001$] and L2+ORG is $-0.012$ [$-0.029$, $+0.003$]: the last two steps are at most small. MD recall, the weakest species, stays at 0.64--0.69 from L1 on (std up to 0.11).
+
+\begin{table}[t]
+\centering
+\caption{RQ1, TEST (73 images, 1{,}210 species instances): YOLO26m on the data ladder, same recipe, mean$\pm$std over seeds 0--2 (VAL chose \texttt{best.pt}; TEST is not used for selection). Accuracy: localized and correctly named (IoU$\ge$0.5, score$\ge$0.25). Images/boxes: training split, all seven classes. Confusion rates: fraction of localized instances of the annotated class predicted as the other class, seeds pooled. $\Delta$: arm minus L3, 95\% bootstrap CI over images.}
+\label{tab:rq1_ablation}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+ & L0 & L1 & L2 & L2+ORG & L3 \\
+\midrule
+Train images / boxes (k) & 103 / 4.4 & 244 / 10.6 & 869 / 33.1 & 1497 / 69.3 & 1738 / 88.1 \\
+\midrule
+\multicolumn{6}{@{}l}{\emph{Detection (H1: expected to improve)}} \\
+Species accuracy (\%) & 56.1$\pm$0.6 & 73.8$\pm$0.4 & 79.7$\pm$1.5 & 81.1$\pm$1.2 & 82.2$\pm$1.6 \\
+$\Delta$ vs.\ L3 (pp) & $-26.1$ & $-8.4$ & $-2.5$ & $-1.2$ & --- \\
+\quad 95\% CI & [$-33.5$, $-18.9$] & [$-12.3$, $-4.9$] & [$-4.8$, $-0.1$] & [$-2.9$, $+0.3$] & --- \\
+Detection recall (\%) & 92.3$\pm$1.7 & 96.0$\pm$0.6 & 97.6$\pm$0.3 & 97.9$\pm$0.2 & 97.7$\pm$0.4 \\
+Recall $<$32\,px (\%) & 44.2$\pm$1.1 & 71.8$\pm$3.7 & 76.5$\pm$4.3 & 78.8$\pm$2.8 & 80.5$\pm$0.7 \\
+Recall 32--48\,px (\%) & 62.9$\pm$5.3 & 71.7$\pm$3.6 & 79.3$\pm$2.5 & 79.7$\pm$2.6 & 80.2$\pm$2.6 \\
+Recall $\ge$48\,px (\%) & 77.4$\pm$9.7 & 83.1$\pm$3.8 & 89.6$\pm$0.9 & 89.4$\pm$1.5 & 90.5$\pm$3.2 \\
+Recall, crowded plates (\%) & 58.7$\pm$0.4 & 75.6$\pm$1.5 & 78.8$\pm$5.5 & 82.8$\pm$2.6 & 83.8$\pm$2.2 \\
+Species FP, INS-only plates (mean) & 75.7 & 48.3 & 0 & 1.7 & 0 \\
+\midrule
+\multicolumn{6}{@{}l}{\emph{Identification (H2: expected not to move)}} \\
+MC$\to$MV, localized (\%) & 18.5 & 19.1 & 14.5 & 15.0 & 11.7 \\
+MV$\to$MC, localized (\%) & 14.8 & 8.0 & 6.3 & 6.3 & 5.4 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\paragraph{Quantity versus targeting.}
+Random subsamples of L3 reach $0.752\pm0.077$ at 244 images (L1: $0.738\pm0.004$) and $0.797\pm0.006$ at 869 images (L2: $0.797\pm0.015$). At these sizes the targeted sets are therefore not distinguishable from random subsets of the final data: the rise up to L2 is explained mostly by the number of images, and the targeted collections show no measurable advantage on this metric (244-image subsamples vary from 0.69 to 0.84 across seeds, so only a large effect would be visible).
+
+\paragraph{H2: identification does not move.}
+Figure~\ref{fig:rq1_confusion} shows the confusion among localized objects for L0 and L3. H2 is only partly supported. Among localized instances, MV$\to$MC confusion falls from 14.8\% (L0) to 5.4\% (L3) and MC$\to$MV from 18.5\% to 11.7\%; so part of what the earlier pipeline treated as a fixed limit moves with the training data. What remains is the point of Section~\ref{sec:exp:rq2v9}: with the best data MC$\to$MV is still 11.7\%. These are pooled point estimates without intervals.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.68\linewidth]{figs/rq1_confusion.pdf}
+\caption{RQ1, TEST: confusion among localized objects for the detector trained on L0 (left) and on full DS-F2 (L3, right), seeds 0--2 pooled (\% of localized instances per annotated class; right block: predicted INS, NOISE or MAR).}
+\label{fig:rq1_confusion}
+\end{figure}
+
+\paragraph{Threats and what the result does not show.}
+The equal-size control is partial and shows only that no targeting effect is visible; the localized gains (small objects, insect-only plates) were not tested against it. L2+ORG$\to$L3 mixes copy-paste with removing the white-paper photographs (42\% of L2+ORG).  Crowded and insect-only rows rest on 7 and 6 plates (descriptive).
+
+\subsection{RQ2 on DS-F2\_v9.0.5: Cascade, Oracle and the Identification Ceiling}
+\label{sec:exp:rq2v9}
+
+
+\paragraph{Setup.} VAL selected \texttt{best.pt}, so VAL numbers are not held out and serve only as a consistency check. Metrics are macro-F1 over the four species at score$\ge$0.25 and IoU$\ge$0.5. Stage~2 is a ConvNeXt-T (CE or part-aware head), DINOv2, DINOv3 or BioCLIP~2, all fully fine-tuned. Detectors: E0 (three seeds), YOLO26l (one seed), RT-DETR-l (three seeds). Intervals are 95\% BCa bootstrap over test images (10{,}000 resamples, paired with the detector-only run) with a sign-flip permutation test~\cite{du2025pairedbootstrap}.
+
+\paragraph{The cascade does not improve on the detector.} On TEST, E0 alone reaches 79.5\% macro-F1 and every one of the five stage-2 backbones lowers it: $\Delta$F1 is $-2.7$ [$-4.8$, $-0.3$] pp for ConvNeXt-T CE ($p_{\text{perm}}=0.013$), $-1.4$ [$-3.7$, $+1.3$] for parts, $-1.7$ [$-3.5$, $+0.1$] for DINOv2, $-2.0$ [$-4.0$, $+0.3$] for DINOv3 and $-1.1$ [$-2.7$, $+0.8$] for BioCLIP~2 (E0, mean over the nine pairs; single-seed classifiers). With YOLO26l (80.5\%) the shifts are $-2.1$ to $-4.0$ pp, and with RT-DETR-l (74.6\%) $-2.3$ to $-5.1$ pp. Intervals of single configurations often include zero (73 images), but the sign is the same in all 5$\times$3 configurations. McNemar $p$ varies between seeds of one configuration ($0.005$--$0.51$ for CE with E0), so we do not summarize it by one value.
+
+\paragraph{Why: a ceiling at identification.} With ground-truth crops the classifiers reach 82.7--83.8\% species accuracy on TEST (87--88\% on VAL), regardless of backbone family; a better backbone does not lift the ceiling. Across the 15 classifiers, 60.0\% of instances are correct for all and 4.9\% are wrong for all; majority vote gives 86.3\% against a mean of 83.4\%. Errors are confident (69.4\% have max-softmax $\ge0.8$) and concentrated in the MD/MV/MC family (family-level accuracy 96.0\% vs.\ 80.6\% by species). Abstention (keeping the detector label below a confidence $\tau$) gains at most $+0.2$\,pp. Confident learning flags 3.7\% (127/3{,}470) of the TEST crops and 4.1\% of VAL as suspect labels, mostly NOISE$\leftrightarrow$MF, MD$\leftrightarrow$MV and MC$\leftrightarrow$MV; we have no expert review, so ``suspect'' does not mean ``wrong''. The rate is in the range reported for curated benchmarks~\cite{northcutt2021pervasive}, and its confusions are the model's own, as ambiguity or label noise would produce.
+
+\paragraph{Limitations and open items.} No expert re-labelled the confusable pairs, so ambiguity cannot be separated from label noise. A near-duplicate check finds no VAL or TEST image with thumbnail similarity $\ge0.98$ to a training image, but 4.7\% of TEST crops reach it against some training crop (plausibly glue background), so we do not claim absence of leakage at crop level. \paragraph{Background class.} A natural fix for the species that the seven-way head sends to \emph{non-species} is an eight-way head with an explicit background class trained on detector false positives (BG). With three classifier seeds on the E0 detectors, BG gives $\Delta$F1 $-2.8$ [$-4.8$, $-0.4$] pp on TEST ($p_{\text{perm}}=0.010$) and $-5.4$ pp on VAL, the same as the CE control ($-2.7$ and $-5.5$ pp); its accuracy on ground-truth crops is $77.6\pm2.8$\% (TEST), not higher. The background class does not remove the loss. Learning curve (ConvNeXt-T, one seed, oracle accuracy with 25\%, 50\% and 100\% of the training crops): TEST 83.0, 81.7, 82.6\%, flat, so more crops are unlikely to lift the ceiling; this is compatible with ambiguity but does not prove it.
+
+\paragraph{Late fusion, cost and localization.} The harness stores only the detector's top-1 class and confidence, so we approximate its class distribution (the rest spread uniformly) and fuse it as $p_{\text{clf}}\,p_{\text{det}}^{\,w}$; this is an approximation. On TEST, F1 (mean over nine pairs) is 79.5\% for E0, 76.9\% for the cascade ($w=0$) and 77.9, 78.7, 79.5 and 79.6\% for $w=0.25$, 0.5, 1 and 2; on VAL it reaches 84.4\% at $w=2$ against 84.7\% for E0. Fusion matches the detector's F1 at $w=2$ (79.6\% vs.\ 79.5\%) but does not meaningfully exceed it, consistent with the ceiling. Inference cost (TEST, one B200, FP32): the E0 detector takes 9--11\,ms per image and the cascade 353--573\,ms depending on the backbone (30--67$\times$; indicative only). E0 localizes $97.7\pm0.4$\% of the TEST species instances (RT-DETR 98.5\%), so almost all remaining error is identification. A late fusion with the detector's true class scores was not run.
+
+\subsection{RQ3: Transfer of Tiny-Object Methods}
+\label{sec:exp:rq3}
+
+\paragraph{Protocol.}
+RQ3 was run as a separate campaign on a different GPU (L40S) with the same recipe as E0 (YOLO26m, 150 epochs, batch 8, \texttt{imgsz} 1920, patience 30) and the same data, so its own E0 (three seeds) is the only control for the variants below; we do not mix it with the E0 of other tables. The variants are: NWD ($w{=}0.5$, $C{=}44$\,px) in the loss only, NWD in the assigner only, NWD plus RFLA, the scale-adaptive GCD ($w{=}0.5$), Wise-IoU v3, a P2 head, training and inference at \texttt{imgsz} 2560 (batch 4), and, with one seed, YOLO11m. The metric is species accuracy on TEST: a ground-truth species instance counts as correct if a detection with score $\ge0.25$ matches it at IoU$\ge$0.5 and has the right class (equal to micro recall over the 1{,}210 species instances). $\Delta$ is the per-seed difference to E0 of the same seed, with a 95\% bootstrap interval over images (10{,}000 resamples), and $p$ is Holm-corrected over the eight comparisons.
+
+\paragraph{No variant improves on E0.}
+Table~\ref{tab:rq3_main} shows that no variant has a positive $\Delta$ whose interval excludes zero. GCD, Wise-IoU v3 and NWD in the assigner only are indistinguishable from E0 ($\Delta$ between $-0.3$ and $+0.3$\,pp); their intervals are $\approx\pm1.7$\,pp wide, so we claim no difference detected, not equivalence. P2, \texttt{imgsz} 2560 and NWD in the loss only are $2.5$--$3.8$\,pp below E0 and do not survive the Holm correction ($p=0.14$, 0.057, 0.084). Only NWD+RFLA is $8.8$\,pp below E0 (Holm $p=0.002$) and unstable: one seed stopped early at epoch~40 with its best epoch near~10, and another diverged (classification loss in the thousands from epoch~27, \texttt{nan} at epoch~30); we kept the recipe and did not retry, so the mean of $72.9\pm7.5$\% includes both. NWD acts through its loss, not through the assigner: the assigner-only variant equals E0 while the loss-only variant is $2.5$\,pp lower. YOLO11m (one seed, exploratory) is $1.2$\,pp below, interval including zero. The seed spread of E0 is 1.2\,pp.
+
+\begin{table}[t]
+\centering
+\caption{RQ3 on TEST (73 images, 1{,}210 species instances), YOLO26m, L40S campaign; three seeds unless noted. Accuracy: mean$\pm$std. $\Delta$: paired difference to E0 of the same seed in pp, with 95\% bootstrap interval over images; $p$: Holm. Recall (\%) by object size $\sqrt{wh}$ ($n=613$, 376, 221). VAL selected \texttt{best.pt} and is not held out; all numbers are TEST.}
+\label{tab:rq3_main}
+\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & Acc. (\%) & $\Delta$ [95\% CI] & $p$ & $<$32 & 32--48 & $\ge$48 \\
+\midrule
+E0 (CIoU) & 81.7$\pm$1.2 & --- & --- & 79.4 & 81.0 & 89.4 \\
+GCD & 81.5$\pm$0.4 & $-0.2$ [$-1.8$, $+1.6$] & 1.00 & 78.3 & 80.5 & 92.3 \\
+Wise-IoU v3 & 81.4$\pm$1.0 & $-0.3$ [$-1.9$, $+1.5$] & 1.00 & 78.9 & 79.6 & 91.4 \\
+NWD, assigner only & 82.0$\pm$1.9 & $+0.3$ [$-1.4$, $+2.4$] & 1.00 & 79.4 & 80.6 & 91.7 \\
+NWD, loss only & 79.3$\pm$3.4 & $-2.5$ [$-4.5$, $-0.5$] & 0.084 & 74.0 & 80.8 & 91.3 \\
+P2 head & 79.0$\pm$2.7 & $-2.8$ [$-5.0$, $-0.4$] & 0.14 & 74.0 & 80.1 & 91.0 \\
+\texttt{imgsz} 2560 & 78.0$\pm$3.3 & $-3.8$ [$-6.1$, $-1.1$] & 0.057 & 72.8 & 79.3 & 90.0 \\
+NWD + RFLA & 72.9$\pm$7.5 & $\mathbf{-8.8}$ [$-12.7$, $-4.9$] & 0.002 & 63.3 & 78.5 & 90.0 \\
+\midrule
+YOLO11m (1 seed) & 81.0 & $-1.2$ [$-4.4$, $+2.1$] & 1.00 & 76.3 & 83.0 & 90.5 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\paragraph{Recall by object size.}
+The smallest objects do not benefit from any variant: the recall below 32\,px is at most equal to E0 (E0 79.4\%, NWD assigner-only 79.4\%) and lower for all others, down to 63.3\% for NWD+RFLA (Table~\ref{tab:rq3_main}). The gains above 48\,px (0.6 to 2.9\,pp) come with a seed spread of 1--5\,pp and are not statistically supported. This agrees with the localization result of RQ2: E0 localizes $97.7\pm0.4$\% of the species instances, so a box-similarity loss has little to repair and the smallest objects are limited by identification.
+
+\paragraph{Sliced inference, test-time augmentation and ensembling.}
+We apply three inference-time methods to the three E0 detectors (mAP@50 under a confidence-0.0 evaluator, not the species harness; WBF is a single result over the three seeds). Sliced inference (512\,px tiles, 25\% overlap) reaches a species recall of $86.7\pm1.8$\% and mAP@50 $69.5\pm0.8$, against $35.5\pm0.9$\% and $9.5\pm1.0$ for the same detector run on the whole frame resized to 512\,px. That comparison is unfair (the resize shrinks the frame $\approx$3.75$\times$); the relevant baseline is E0 at native resolution (mAP@50 $84.2\pm0.5$, mAP@50:95 $61.7\pm0.1$), and slicing a detector trained at 1920\,px with 512\,px tiles does not reach it. TTA at 1920 adds $+0.4$ mAP@50 and $+0.5$ mAP@50:95, a small gain. A weighted-boxes-fusion ensemble of the three E0 detectors gives mAP@50 $83.6$, below the single-model mean (84.2), so we find no gain from ensembling either.
+
+
+\paragraph{Why the aerial loss recipes do not transfer here.}
+Three properties of our regime differ from the benchmarks on which NWD, RFLA and SAHI were validated. First, the objects are tiny by the COCO convention but the images are processed at native resolution: a 44-px fly spans about five cells of the stride-8 feature map, whereas the AI-TOD regime for which NWD was designed has objects of a few pixels after the network's own downscaling; the IoU sensitivity that NWD corrects is therefore much milder. Second, YOLO26 already uses a task-aligned dynamic assignment and an NMS-free one-to-one head~\cite{yolo26}; the reported gains of NWD and RFLA come from anchor-based or two-stage detectors with static IoU-threshold assignment~\cite{wang2021nwd,xu2022rfla,xu2022aitod}, where a Gaussian similarity changes which anchors become positive. The scope ablation fits this reading: the assigner does nothing and the harm sits in the loss. Third, sliced inference is designed for the case where the alternative is to downscale a large image below the object scale~\cite{akyon2022sahi}; here the detector already runs at native scale. These are explanations compatible with the data, not tested causes; $C=44$\,px was measured on an earlier data version.
+
+\subsection{Error Analysis}
+\label{sec:exp:errors}
+
+Confusion rates among TEST species for E0 and the E0\,+\,CE cascade (nine detector--classifier pairs, mean; $\Delta$ is mean$\pm$std of the paired difference; MV$\to$non-species 4.7\% to 1.5\%, MC$\to$non-species 3.0\% to 0.7\%). The dominant error of the detector is MD$\rightarrow$MV (26.3\%) and MC$\rightarrow$MV (11.7\%). The cascade moves these only partly: MD$\rightarrow$MV falls by $5.3\pm3.5$\,pp, but the instances do not become correct; MD$\rightarrow$\emph{non-species} rises by $8.0\pm5.1$\,pp (7.0\% to 15.0\%) and MV$\rightarrow$MD rises by $4.9\pm1.2$\,pp (1.4\% to 6.3\%). The seven-way head therefore trades one error for others: MD ends at 61.4\% correct against 64.9\% for the detector. MC$\rightarrow$MV does not move ($+1.4\pm6.2$\,pp). MF is never confused with another species by either system; its errors are non-species and missed objects (5.3\%, identical in both because the cascade does not change boxes). 
+
+
+

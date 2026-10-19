@@ -1,0 +1,17 @@
+\section{\uppercase{The DS-F2 Dataset}}
+\label{sec:dataset}
+
+\subsection{Lineage and Acquisition Protocol}
+\label{sec:dataset:lineage}
+
+DS-F2 was built incrementally: the evaluated version, DS-F2\_v9.0.5, is the result of five successive batches of plates (v5.1, v6.0, v7, v8, v9), each added after inspecting the failure modes of the detector trained on the previous ones. Validation and test splits grew with the batches and share no file name or hash with training images; labels of shared images are identical except for a re-annotation of 62 images between v6.1.1 and v7.1.0. The data of the prior pipeline~\cite{pacbb2026} (here called v4: 1280$\times$720, six classes, plates dominated by insects and noise) share no image with DS-F2 and were acquired at lower resolution; they are therefore \emph{not} a subset of DS-F2, and the effect of the new data is measured on a ladder of cumulative training sets (Section~\ref{sec:exp:rq1}) rather than by removing images from the final split. All images are $1920\times1080$ photographs of industrial sticky traps at a fixed focal distance.
+
+\subsection{Targeted Physical Collections}
+\label{sec:dataset:collections}
+
+The collections differ from the prior data in four verified ways. (i)~\emph{Species-pure plates}: from v6.0 on, each plate carries a single species (identified by a handwritten label on the plate: D, V, C, F for MD, MV, MC, MF; G for other insects), instead of the mixed-species plates of v5.1. (ii)~\emph{Crowding}: single-species plates with up to 75--77 specimens per image appear in v8 and v9 (maximum species instances per image: 42 in v5.1, 35 in v6.0, 34 in v7, 75 in v8, 77 in v9; 97, 83, 70, 100 and 174 images per batch). (iii)~\emph{Insect-only plates} (INS without any target species): 8, 20 and 40 images in v7, v8 and v9, which teach the detector not to assign a species to other insects. (iv)~\emph{Graduated plates}: a printed 8$\times$4 grid is present on \emph{all} plates of every version; what changed across versions is the quality and number of the plates prepared by the team in the laboratory (smooth and glue-coated), not the presence of the grid. Two further sources complement the plates: \emph{white-paper photographs} (DS-ORG: flies on white paper, one species per photograph, large objects, about 58 instances per image) present in v5.3.5--v8.1.1 and absent from v9.0.5, and \emph{instance copy-paste} from real annotated crops, present only in v9.0.5.
+
+\subsection{Classes and Statistics}
+\label{sec:dataset:classes}
+
+The detector uses seven classes: four target fly species, MD (housefly, \emph{mosca doméstica}), MV (blowfly, \emph{mosca varejeira}), MC (flesh fly, \emph{mosca da carne}) and MF (fruit fly, \emph{mosca da fruta}), and three non-target classes, INS (other insects), NOISE and MAR. The evaluated version has 1{,}738 training images (88{,}128 boxes of all classes), 52 validation images (856 species instances) and 73 test images (1{,}210 species instances: MD 224, MV 302, MC 268, MF 416). The mean object size is $\sqrt{wh}\approx44$\,px in $1920\times1080$ images. Validation and test images share no file name or hash with training, but the dataset records no plate identifier per image, so we cannot exclude that images of the same plate appear on both sides of a split; we return to this in the limitations.

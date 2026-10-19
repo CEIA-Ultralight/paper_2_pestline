@@ -1,0 +1,66 @@
+\section{\uppercase{Methods}}
+\label{sec:method}
+
+We compare, on the same data at native resolution and with one evaluation harness: a single-stage detector that localizes and identifies jointly (Section~\ref{sec:method:single}); a detect-then-classify cascade (Section~\ref{sec:method:cascade}); and the detector with tiny-object recipes from aerial imagery (Section~\ref{sec:method:tiny}). Section~\ref{sec:method:protocol} fixes the shared protocol.
+
+\subsection{Single-Stage Baseline}
+\label{sec:method:single}
+
+The baseline (E0) is YOLO26m~\cite{yolo26}, an NMS-free end-to-end detector, fine-tuned from the released COCO weights with Ultralytics 8.4.142 on the seven DS-F2 classes (four target species plus \emph{INS}, \emph{NOISE}, and \emph{MAR}; Section~\ref{sec:dataset}). Images are fed at their native $1920\times1080$ resolution (\texttt{imgsz}~1920); the dataset is never downscaled. Training follows the Ultralytics defaults otherwise: up to 150 epochs, batch size~8, early stopping with patience~30, one GPU per run (NVIDIA B200 for RQ1 and RQ2, L40S for RQ3; evaluation in FP32).
+
+\paragraph{Checkpoint selection.}
+Ultralytics keeps the checkpoint with the best \emph{fitness} ($0.1\cdot$mAP@50 $+\,0.9\cdot$mAP@50:95 on the validation split) as \texttt{best.pt}. Detector VAL metrics in this paper are those the trainer logs at that epoch. We do not report the per-epoch maximum of mAP@50 from the training log, which is optimistically biased. Because VAL selects \texttt{best.pt}, VAL metrics are not held-out estimates.
+
+\subsection{Detect-then-Classify Cascade}
+\label{sec:method:cascade}
+
+The cascade keeps a detector frozen and unchanged as \emph{stage~1} (E0, seeds 0--2), and appends a crop classifier as \emph{stage~2}. Nothing is retrained jointly, so differences to the baseline stem from decoupling identification from localization.
+
+\paragraph{Stage 1 and crops.}
+E0 runs once per image at \texttt{imgsz}~1920 (FP32, no TTA, confidence floor 0.001, at most 300 detections, NMS IoU 0.5); all proposals go to stage~2, which cannot recover objects the detector never proposed. Each box is expanded by 75\% of its width and height per side, clipped, and resized to $384\times384$; classifier training applies the same rule to the annotated boxes.
+
+\paragraph{Stage 2: classifier.}
+The main classifier is an ImageNet-pretrained ConvNeXt-T fine-tuned end-to-end as a 7-way classifier (so a proposal can also become \emph{INS}, \emph{NOISE} or \emph{MAR}): $384\times384$ input, flips, rotation $\pm30^\circ$, mild color jitter, AdamW (lr $8\times10^{-5}$), cosine schedule, batch 32, label smoothing 0.1, at most 24 epochs with patience 5, no class re-weighting. The checkpoint is selected on the crop validation split by species macro-F1, never on detection metrics or TEST. CE and parts heads use three seeds (42, 84, 126).
+
+We compare four heads without extra annotation: \emph{CE} (control), \emph{parts} ($K=4$ spatial attention maps fused with the global descriptor), \emph{ArcFace} and \emph{SupCon}; only CE and parts are replicated over three seeds; ArcFace and SupCon were trained once, ranked below the parts head in a single-seed VAL cascade check (mAP50 75.7\% for ArcFace vs 76.4\% for parts) and were not carried forward. DINOv2, DINOv3 and BioCLIP~2 backbones are fine-tuned with the same recipe.
+
+\paragraph{Fusion policy.}
+The primary policy, \emph{label-only}, replaces the detector's class by the classifier's arg-max and keeps the detector's score and geometry. The secondary policy, \emph{product}, multiplies the detector score by the classifier's maximum softmax probability. Both were frozen before any TEST evaluation. We make no claim about better fusion designs.
+
+\paragraph{INS, NOISE and MAR.}
+These classes are never removed: they compete with the species inside the detector head, or inside the classifier in the cascade, so a proposal moved to \emph{NOISE} leaves the species metrics (Section~\ref{sec:exp:errors}).
+
+\subsection{Tiny-Object Transfer Setup}
+\label{sec:method:tiny}
+
+We take the recipes that report the largest gains on aerial tiny-object benchmarks and apply them to E0 with a single change per experiment, keeping data, resolution, and schedule fixed.
+
+\paragraph{Similarity measures.}
+The normalized Wasserstein distance~\cite{wang2021nwd} models each box as a 2-D Gaussian: $\mathrm{NWD}(A,B)=\exp(-\sqrt{W_2^2(\mathcal{N}_A,\mathcal{N}_B)}/C)$, with $C=44$\,px, the mean $\sqrt{wh}$ of the training boxes measured on an earlier data version (the final one is of the same order). NWD enters either the box-regression loss, $\mathcal{L}_{\text{box}} = 1-[(1-w)\,\mathrm{CIoU} + w\,\mathrm{NWD}]$ (loss only), or the overlap term of the task-aligned assigner (assigner only, both heads), with $w=0.5$. Other variants: a scale-adaptive Gaussian similarity (``GCD'', arXiv:2510.27649), receptive-field label assignment (RFLA~\cite{xu2022rfla}) on top of NWD, and Wise-IoU v3 replacing CIoU. All use three seeds except YOLO11m.
+
+\paragraph{Resolution and multi-scale.}
+The single-stage alternative that attacks the feature-stride side of the problem is a P2 head (\texttt{yolo26m-p2}, adding a stride-4 detection level; same recipe otherwise; three seeds). We also train and evaluate at \texttt{imgsz}~2560 (batch 4, three seeds), and one YOLO11m run (seed~0) checks whether the result depends on the detector family.
+
+\paragraph{Sliced inference, TTA and ensembling.}
+Following SAHI~\cite{akyon2022sahi}, E0 runs on $512\times512$ tiles with 25\% overlap and tile predictions are merged into the frame (all seven classes, confidence 0.0, IoU 0.5, three seeds); E0 at native 1920 is the fair baseline under the same evaluator, whose numbers are not comparable with the species harness. A tile-trained model was not run. We also apply flip-and-scale TTA and a weighted-boxes-fusion ensemble of the three E0 seeds.
+
+\subsection{Evaluation Protocol}
+\label{sec:method:protocol}
+
+\paragraph{Splits.}
+DS-F2\_v9.0.5 is split into 1{,}738 training images (88{,}128 boxes), a validation split of 52 images (856 species instances) and a test split of 73 images (1{,}210 species instances: MD 224, MV 302, MC 268, MF 416). The validation split was used for every selection decision: detector checkpoint (via fitness), classifier checkpoint (via crop macro-F1), and choice of the ``parts'' head over CE, which remains the control (both are reported). TEST was consulted in earlier campaigns, but no model choice of the multi-seed campaign looked at it; the earlier classifier ensemble was assembled after seeing test results and is exploratory only. Hence no never-consulted hold-out exists.
+
+\paragraph{Species metrics (primary).}
+A monitoring system is judged on whether each trapped fly is found \emph{and} named correctly, so our primary metrics are per-species precision, recall, and F1 at a fixed operating point, computed by the same harness for every pipeline: predictions with score $\ge$0.25 are matched to ground truth class-agnostically at IoU$\ge$0.5 (greedy, highest IoU first, one prediction per ground-truth box); a matched species instance counts as a true positive only if the predicted class equals the annotated species, and every prediction labelled with a species that is unmatched or matched to a box of a different class (including \emph{INS}, \emph{NOISE}, \emph{MAR}) counts as a false positive of that species. Aggregate precision/recall/F1 over the four species are micro-averaged over the 1{,}210 test instances (macro-F1 is the mean of the four per-species F1); the threshold and IoU were fixed before any test evaluation. We additionally report ``species-correct among localized'', i.e.\ accuracy conditioned on the object having been found, to separate identification from localization.
+
+\paragraph{Detection metrics (secondary).}
+mAP@50 and mAP@50:95 over the seven classes are computed with the Ultralytics AP utility on the harness predictions. They are not comparable to the mAP Ultralytics logs during training.
+
+\paragraph{Cost.}
+We report mean inference latency per image on one B200 GPU (decoded $1920\times1080$ image, FP32, models resident). It varies between jobs on the shared node and is indicative only.
+
+\paragraph{Oracle and error decomposition.}
+We also apply each classifier to the crops of the \emph{annotated} boxes (no detector): the species accuracy under perfect localization, an identification ceiling and not a deployable system. Each ground-truth instance of a pipeline is either not localized (no proposal with score $\ge$0.25 and IoU$\ge$0.5), localized with the wrong species, or correct.
+
+\paragraph{Seeds and statistics.}
+Every detector configuration is trained with seeds 0, 1 and 2, and every cascade classifier head with seeds 42, 84 and 126. A cascade configuration is evaluated on the $3\times3$ cross of detector and classifier seeds (nine pairs). We report mean$\pm$sample standard deviation; a delta is the mean$\pm$std of per-seed (or per-pair) differences. For the species outcome (correct or incorrect for each of the 1{,}210 test instances) we use exact McNemar tests between a cascade and the single-stage output of the same detector seed, and a 95\% bootstrap interval of the accuracy difference obtained by resampling \emph{test images} (10{,}000 resamples). McNemar treats instances as independent and understates uncertainty, so the image-level interval is the more conservative. Holm's correction is applied within the nine pairs of a detector--head combination and over all 36 pairs of the four combinations. Detector variants are compared with E0 of the same seed, by per-seed deltas and McNemar tests.
