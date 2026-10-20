@@ -18,6 +18,7 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 | F01-03 | Tabela de mapeamento de classes STID ↔ DS-F2 (colisão de sigla MF) | round-01 R4/R5 | open |
 | F01-04 | Não misturar mAP do `results.csv` com mAP do harness na mesma tabela | round-01 R3 | open |
 | F01-05 | Remover "same setting/partner" e placeholders de anonimato | round-01 R5 | open (manuscrito reescrito para VISAPP — reverificar) |
+| F01-06 | Unidade do NWD na loss (grid × px) — diagnóstico e rerun | round-01 R1 W1/Q1 + META item 1; reaberto por Isaac em 2026-10-16 | diagnosed 2026-10-18 (confirmado: loss em grid, NWD saturado; PAPER_FACTS §12.1); fix `FLYDET_NWD_LOSS_UNITS=px`; rerun E15 ×3 + E16 ×1 concluído 2026-10-18 (PAPER_FACTS §12.2: E15 sem ganho, E16 colapsa); texto do Método/E12 pendente de decisão do autor |
 
 ## Ciclos de RQ
 
@@ -65,3 +66,5 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 
 ## 2026-10-20 — RQ3 cadeia G (h100n2, job 35018)
 G0 (controle H100) 3 seeds, G1 3, G2 3, G3 2 (s2 cancelada por prazo). Avaliação no TEST completo via cópia PNG (HEIC convertidos; harness ignora .heic → 64 imagens). Nenhum NWD ajustado supera o controle; w=1,0 colapsa (53,9%). Ver PAPER_FACTS §14. Rodada 10 do revisor: 3/5, 0F/5M/11m.
+| 2026-10-18 | RQ3 | **Bug de unidade do NWD na loss confirmado** (F01-06): o Ultralytics passa ao `BboxLoss.forward` caixas em grid (`target/stride`), então C = 44 virava 44 células e o NWD da loss saturava (≈0,99; log dgx1 `target_max_in=240`). E10 (§9.1 e §12) = NWD só no assigner + CIoU ×0,5; colapso do E12 = artefato; ablação "NWD só loss" = CIoU ×0,5. GCD/P2/SAHI/RFLA não afetados. Fix `FLYDET_NWD_LOSS_UNITS=px` + testes CPU; fila `E15_nwdfix_w0.5_s{0,1,2}` + `E16_nwdpure_w1.0_px_s0` iniciada às 09:04 (dgx1 GPU 0). Conclusão "NWD não transfere" **suspensa** até o E15. | PAPER_FACTS §12.1; `rq3_tiny_object/results/runs.md` | Lucas (dgx1) |
+| 2026-10-19 | RQ3 | Rerun NWD com a loss em px concluído (dgx1/V100, mesma campanha e E0 da §12): **E15** (w=0,5, 3 seeds) TEST macro-F1 78,8±0,8 vs E0 78,8±2,6 (Δ +0,1±2,8; McNemar significativo em 2/3 seeds com **sinais opostos**; Δacc −0,36 [−2,14;+1,38]); VAL mAP50:95 −1,5±1,0 (3/3 neg.); <32 px −1,8±4,8 → "NWD não transfere" **confirmado sem o bug**. **E16** (NWD puro, s0) colapsa de novo (best ép. 4, macro-F1 66,7, Δ −12,7) → colapso do E12 não era só artefato. Gerador estendido para E15/E16; CSVs `v9_dgx1_nwd_*` regenerados (E0/E10 idênticos). | PAPER_FACTS §12.2; `rq3_tiny_object/results/v9_dgx1_nwd_*.csv` | Lucas (dgx1) |

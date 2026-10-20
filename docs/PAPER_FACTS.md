@@ -32,7 +32,7 @@ Receita comum: yolo26m.pt, 150 ép., batch 8, imgsz 1920, patience 30, H100 80 G
 | E0 | baseline CIoU | **0,8565** | — | 1 (default) | results.csv E0 | ✅ |
 | E10 | NWD w=0,5, C=44 | **0,8706** (+1,4) | — | 1 (default) | 32933 / 29c37e8 | ✅ |
 | E11 | NWD w=0,75 | 0,8642 | — | 1 | 32947 (E10x) | ✅ |
-| E12 | NWD w=1,0 (sem CIoU) | 0,6719 (colapso, early stop ép. 10) | — | 1 | 32947 | ✅ negativo |
+| E12 | NWD w=1,0 (sem CIoU) | 0,6719 (colapso, early stop ép. 10) | — | 1 | 32947 | ⚠️ **artefato do bug de unidade do NWD na loss (§12.1)**; refeito como E16 (px, v9), que **também colapsou** (§12.2) |
 | E10b | GCD w=0,5 | 0,8619 | **0,6261** (melhor mAP50:95 de todos) | 1 | 32947 | ✅ |
 | E13 | multi_scale (rect=false) | — | — | — | 32947 | ❌ CUDA OOM (run `E13_yolo26m_multiscale`, failed após 127 s); **abortou a cadeia 32947** → E7 e TTA/WBF dessa cadeia não rodaram |
 | E10 s0/s1/s2 | NWD w=0,5, "seeds 0–2" | **inválido** | **inválido** | 3 declaradas / **1 efetiva** | 33015 (E10y) | ❌ runs `E10_nwd_seed0/1/2` finished, mas summary **byte-idêntico** entre si e ao `E10_yolo26m_nwd` (mAP50 0,854434 / mAP50:95 0,618038 / P 0,783389 / R 0,831122 / best_fitness 0,61771) → bug de seed (`init_seeds` antes do trainer, sobrescrito por `args.seed=0`). Não é multi-seed. |
@@ -118,7 +118,7 @@ Origem verificada: mesmo run W&B `test-campaign-036ef018` → `rq3_tiny_object/r
 | SupCon | 72,0–73,3 % | recall 80,4 %, precisão 65 % |
 | Ensemble + TTA | 75,4–75,6 % | sem ganho, 3,7× custo |
 | RoI head sobre features YOLO (GT boxes) | — | pior que classificadores dedicados |
-| NWD w=1,0 (E12, VAL mAP50) | 0,6719 | colapso; CIoU precisa ficar |
+| NWD w=1,0 (E12, VAL mAP50) | 0,6719 | colapso — ⚠️ artefato do bug de unidade (§12.1), não usar como evidência; refeito como E16, que também colapsou (§12.2) |
 | multi_scale 1920 (E13) | OOM | inviável em 80 GB sem grad. accumulation |
 
 ## 5. Paper anterior (citar em 3ª pessoa; NÃO reutilizar texto/figuras)
@@ -162,6 +162,8 @@ Ausentes do W&B e **não rastreáveis neste nó**: `results.csv` best-epoch/`bes
 **Protocolos (nunca misturar numa tabela):** **P1** Ultralytics `results.csv` (VAL, best epoch = máx. fitness 0,1·mAP50+0,9·mAP50:95); **P2** harness `eval_cascade_matrix` (conf ≥ 0,25, IoU ≥ 0,5, matching class-agnóstico; P/R/F1 de MD/MV/MC/MF; "micro" = soma de TP/predições das 4 espécies; "macro" = média das 4; acc\|loc = corretos/localizados); **P3** avaliador `fly_det.sahi_inference` (7 classes, conf 0,0); **P4** `ap_per_class` recalculado pelo analista de `per_image_preds.jsonl` (mesmo código de `eval_yolo_cascade.metrics`); **P5** Ultralytics val no TEST de `eval_wbf_tta.py` (pendente de validação).
 
 ### 9.1 RQ3 — detectores (3 seeds por variante; E0 vs E10 vs GCD vs P2)
+
+> **⚠️ 2026-10-18 (§12.1):** em todos os runs E10/NWD desta seção o NWD **da loss** foi calculado em unidades de grid (saturado ≈0,99); só o NWD do **assigner** estava correto. Leia "E10" como *NWD no assigner + CIoU com metade do peso na loss*. A ablação "NWD só loss" testou, na prática, *CIoU com peso 0,5*. GCD, P2, SAHI e RFLA (como candidate expansion) não são afetados.
 
 Fonte: `rq3_tiny_object/results/tiny_variants_multiseed.csv` (e subconjunto `nwd_3x3.csv` = E0 + E10); runs `E0_s{0,1,2}`, `E10_nwd_w0.5_s{0,1,2}` (job 33321), `E11_gcd_w0.5_s{0,1,2}`, `E1_p2_s{0,1,2}` (job 33363) em `/raid/user_marcospaulo/flydet_runs/<run>/` (`runs/*/results.csv`, `test_eval/<run>/single/label_only/{metrics.json,per_instance.csv}`). **multi-seed (n=3)**.
 
@@ -241,6 +243,7 @@ E0 × partes: Δ R +3,3 ± 2,4, P −0,4 ± 2,8, F1 +1,2 ± 2,1 (macro-F1 73,8 �
 | Partes ≈ CE (§3) | macro-F1 73,8 vs 72,5; oráculo 79,7 vs 79,6 | **confirma** |
 | Confusão MF↔outra espécie "irredutível" (PACBB, §5) | MF→MC = MC→MF = 0 %; MF→não-espécie 15,5 % | **não se aplica** a MF↔MC |
 | NWD ajuda objetos pequenos | recall <32 px Δ +1,0 ± 6,4 | **sem efeito** |
+| "NWD na loss e no assigner" (Método) / colapso w=1 por falta de termo de forma | NWD da loss em grid, saturado (§12.1) | **incorreto** — E10 = NWD só no assigner (efetivo); colapso E12 = artefato; mas o NWD puro em px (E16) também colapsa (§12.2) → mecanismo correto é "gradiente ≈ 0 longe do alvo", não "falta termo de forma" |
 
 ### 9.4 CSVs da campanha B200 (todos com `split`, `seeds`, `n_seeds`, `source_path`, `job`; script gerador local `_scratch/b200_{lib,rq3,rq2,rq2_policy}.py`, não versionado)
 
@@ -342,6 +345,8 @@ Fonte: `rq1_data/results/equalsize_summary.csv`; gerador `common/analysis/rq1_eq
 - Ressalva: o pool do L3 contém rótulos das versões finais (inclui copy-paste, DS-ORG removido) — o ganho a 103 imagens pode vir de rótulos mais limpos, não de "alvo" da coleta.
 
 ## 12. RQ3 no DS-F2_v9.0.5 — campanha dgx1/V100 (E0 × NWD, **multi-seed 0/1/2**; gerado em 2026-10-16)
+
+> **⚠️ 2026-10-18 (§12.1):** o E10 desta tabela tem o NWD da loss saturado (bug de unidade). Os números abaixo valem para *NWD no assigner + CIoU ×0,5 na loss*, não para "NWD na loss e no assigner". A leitura "NWD não transfere" fica **suspensa** até o E15 (NWD corrigido, 3 seeds). **2026-10-19:** E15 concluído (§12.2) → leitura **confirmada** com o NWD corrigido (Δ macro-F1 +0,1 ± 2,8).
 **Campanha separada** da B200 (§9/§10/§11): 1× V100 32 GB, Docker `pestline-rq3:cu124` (torch 2.6.0+cu124, ultralytics 8.4.142, fly_det b36580a); E0 aqui é o baseline **desta** campanha — não misturar com o E0 da §10 na mesma tabela. Receita E0 idêntica (yolo26m, 150 ép., batch 8, imgsz 1920, patience 30, `best.pt` na VAL); E10 = 0,5·CIoU + 0,5·NWD, C=44 px (medido no v8.1.1, não recalculado), scope=both. TEST 73 imgs / 3.494 GT / 1.210 de espécie (MD 224, MV 302, MC 268, MF 416), harness P2 (`eval_cascade_matrix`, conf ≥ 0,25, IoU ≥ 0,5, class-agnóstico). VAL 52 imgs / 2.359 GT (não held-out). 83 HEIC convertidas para PNG antes do treino (sem isso o TEST contava 2.980 GT). Fonte: `rq3_tiny_object/results/v9_dgx1_nwd_{runs,summary,paired,size_bins}.csv`; gerador `common/analysis/rq3_v9_dgx1_analysis.py`; runs em `rq3_tiny_object/results/runs.md`. Média ± desvio amostral (ddof=1); Δ = E10 − E0 pareado por seed.
 
 | Métrica | E0 (n=3) | E10 NWD (n=3) | Δ E10−E0 (média ± std; por seed) |
@@ -426,3 +431,54 @@ Fonte: `rq3_tiny_object/results/v9_g_tuned_{runs,summary}.csv`; gerador `common/
 | G3 NWD w0,5 C88 | **2 (s2 cancelada por prazo)** | 81,8±3,7 | 79,2/84,5 | −0,70 pp [−3,02; +1,78] (por seed −5,21/+3,80) |
 Leitura: nenhum braço NWD ajustado supera o controle; w=1,0 degrada fortemente (colapso consistente nas 3 seeds). Controle H100 (82,2) coerente com L40S (81,7).
 Cadeia 35018 cancelada após G3 s1 (G3 s2 não rodou). Seeds de G3 divergem em 9 pp: resultado inconclusivo, não vantagem.
+### 12.1 Diagnóstico: unidade do NWD na loss (2026-10-18; levantado pelo R1 W1/Q1 da rodada 01 e por Isaac em 2026-10-16)
+
+**Fato.** No Ultralytics 8.4.142 (`ultralytics/utils/loss.py`, `v8DetectionLoss.get_assigned_targets_and_loss`) o assigner recebe as caixas em **pixels** (`pred_bboxes.detach() * stride_tensor`, `gt_bboxes`, l. 428), mas `BboxLoss.forward` recebe as caixas em **unidades de grid** (`pred_bboxes` de `bbox_decode` + `target_bboxes / stride_tensor`, l. 449). O `nwd_patch.py` usava C = 44 nos dois pontos → **na loss, C = 44 células** = 352 / 704 / 1.408 px em P3/P4/P5. A CIoU é invariante à escala (não afetada); o GCD usa escala local (invariante, salvo `clamp(min=1)`); P2, SAHI e RFLA não usam o NWD.
+
+**Evidência.**
+- CPU, caminho real da loss (DetectionModel yolo26 → E2E loss → `BboxLoss.forward`), batch sintético 1920² com caixas 40×40 px: `target` máx. na loss = 214 (não 1.920); lado médio da caixa = 4,4 (não 40); NWD para erro W₂ ≈ 4,9 px = **0,988 em grid vs 0,895 em px**. Gradiente do termo NWD em grid = 0,14× / 0,07× / 0,035× do correto (P3/P4/P5).
+- dgx1, treino real `E15_nwdfix_w0.5_s0` (log `~/pestline/logs/E15_nwdfix_w0.5_s0.log`, 2026-10-18 09:04): `target_max_in=240.0` (= 1.920/8, grid) e `target_max_px=1920.0` após a correção; `nwd_mean` 0,79–0,90 nas 4 primeiras chamadas (variando entre batches), `nwd_min` ≈ 0. As 20 linhas `[nwd_diag]` vêm do processo de treino → o patch age no treino (vale também para os E10 antigos: o NWD do assigner estava ativo).
+
+**Consequências para os números existentes.**
+- **E10** (§9.1 B200/v8.1.1 e §12 dgx1/v9): efetivamente *NWD (correto) no assigner + 0,5·CIoU + termo NWD quase constante na loss* — **não** "NWD na loss e no assigner".
+- **E12** (w = 1,0): o termo IoU da loss fica ≈ constante; resta só a L1 de ltrb (YOLO26 tem `reg_max=1`, sem DFL). O colapso é **artefato de implementação**, não propriedade do NWD. **⚠️ Revisto em 2026-10-19 (§12.2):** o E16 (NWD puro em px, sem o bug) também colapsa; o E12 continua inválido como evidência, mas "o NWD puro converge sem o bug" é falso.
+- **Ablação "NWD só loss"** (§9.1, B200): testou *CIoU com peso 0,5*, não NWD. **"NWD só assigner"** é válida.
+- **GCD, P2, SAHI, RFLA**: inalterados.
+
+**Correção.** `FLYDET_NWD_LOSS_UNITS=px` multiplica as caixas pelo stride antes do NWD da loss (`(pred_bboxes * stride)[fg_mask]`); CIoU e assigner inalterados. Default `grid` = legado (reproduz E10/E11/E12). Testes CPU `tests/test_nwd_patch.py::TestNWDLossUnits` (loss em px = NWD em pixels em P3/P4/P5; grid satura > 0,98). Verificado também com predições em fp16 (AMP): loss e gradientes finitos para erros de 5 a 600 px.
+
+**Reexecução (dgx1/V100, mesma campanha da §12; ✅ concluída em 2026-10-18 — resultados na §12.2).**
+
+| Run | Config | Seeds | Papel |
+|---|---|---|---|
+| `E15_nwdfix_w0.5_s{0,1,2}` | 0,5·CIoU + 0,5·NWD, C = 44 px, scope=both, **loss em px** | 0/1/2 | substitui o E10 como "NWD na loss e no assigner"; comparar com E0 da §12, pareado por seed |
+| `E16_nwdpure_w1.0_px_s0` | NWD puro (w = 1,0) na loss e no assigner, loss em px | 0 | refaz o E12 sem o bug; **single-seed ⇒ exploratório** |
+
+Mesma receita do E0 (§12); C = 44 px mantido (medido no v8.1.1, não recalculado) para mudar uma variável só. Risco conhecido do E16: com erro grande o NWD puro dá gradiente ≈ 0 (teste CPU: |grad| ~100× menor que com CIoU para erros de ~600 px); se colapsar, é resultado legítimo ("NWD sozinho não basta"), distinto do E12.
+
+**Frase segura até o E15:** "nenhuma variante testada melhora a identificação de espécie além da variância entre seeds"; o E10 só pode ser descrito como "NWD no assigner (em pixels); na loss, a mistura reduz efetivamente o peso da CIoU pela metade".
+
+### 12.2 Resultado do rerun E15/E16 (NWD com a loss em px; gerado em 2026-10-19)
+
+Fila dgx1 18/out 09:04 → 17:36, os 4 runs `DONE`, `loss_units=px` confirmado no log e no `nwd_config.json`, seeds distintas, 0 erros. Mesma campanha, TEST, harness e E0 da §12 (Δ pareado por seed contra o mesmo E0). Fonte: `rq3_tiny_object/results/v9_dgx1_nwd_{runs,summary,paired,size_bins}.csv` (variantes `E15_nwd_px`, `E16_nwdpure_px`; as linhas E0/E10 foram regeneradas e são idênticas às de 2026-10-16); gerador `common/analysis/rq3_v9_dgx1_analysis.py`. VAL = validação final do `best.pt` no log (não held-out).
+
+| Métrica | E0 (n=3) | E15 NWD px w=0,5 (n=3) | Δ E15−E0 (média ± std; por seed) | E16 NWD puro px (s0, exploratório) | Δ E16−E0 s0 |
+|---|---:|---:|---|---:|---:|
+| TEST macro-F1 espécie | 78,8 ± 2,6 | 78,8 ± 0,8 | +0,1 ± 2,8 (−1,4 / −1,7 / +3,3) | 66,7 | −12,7 |
+| TEST micro F1 | 79,7 ± 2,3 | 79,7 ± 0,9 | −0,0 ± 2,8 (−1,5 / −1,8 / +3,2) | 68,0 | −12,2 |
+| TEST micro R / P | 81,7 / 77,8 | 81,3 ± 2,2 / 78,1 ± 0,4 | R −0,4 ± 3,1; P +0,3 ± 4,2 | 69,3 / 66,6 | R −13,3; P −11,1 |
+| TEST acc\|loc | 83,5 ± 0,8 | 83,2 ± 2,4 | −0,3 ± 3,2 (−3,9 / +0,8 / +2,2) | 71,7 | −12,7 |
+| TEST recall de detecção (espécie) | 97,9 ± 0,3 | 97,8 ± 0,3 | −0,1 ± 0,0 | 96,8 | −1,2 |
+| VAL mAP50 | 88,5 ± 0,4 | 87,5 ± 1,2 | −0,9 ± 1,1 (+0,3 / −1,4 / −1,7) | 78,2 | −10,2 |
+| VAL mAP50:95 | 63,8 ± 0,1 | 62,3 ± 1,0 | **−1,5 ± 1,0** (3/3 negativos: −0,5 / −2,5 / −1,4) | 48,9 | −14,8 |
+| Recall TEST MD / MV / MC / MF | 63,7 / 86,8 / 87,7 / 83,8 | 61,5 / 89,9 / 87,1 / 82,1 | −2,2±2,7 / **+3,1±0,5** (3/3 pos.) / −0,6±8,3 / −1,7±5,4 | 45,5 / 77,2 / 83,6 / 67,3 | −19,6 / −8,9 / −6,7 / −17,3 |
+| F1 TEST MD | 70,5 ± 2,5 | 68,8 ± 2,2 | −1,6 ± 1,2 (3/3 negativos) | 47,2 | −24,0 |
+| Recall de espécie <32 / 32–48 / ≥48 px | — | — | −1,8±4,8 / +2,0±3,8 / −0,3±3,0 | — | −20,1 / −8,0 / −3,6 |
+| Épocas (best) | 75 (45 ± 7) | 83 (53 ± 23) | — | 34 (4) | — |
+| Tempo de treino (V100) | 2,20 ± 0,22 h | 2,47 ± 0,67 h | +0,27 h | 1,01 h | — |
+
+- **McNemar exato** (E15 vs E0, 1.210 GT por seed): s0 b=38/c=85, p=3,4e-5 (Δacc −3,88, **favorece E0**); s1 b=61/c=52, p=0,45 (+0,74); s2 b=72/c=47, p=0,028 (+2,07, **favorece E15**). Os dois significativos têm **sinais opostos** → efeito depende da seed, não do método.
+- **Bootstrap por imagem** (seeds agrupadas, 10.000, 67 imagens): Δacc E15−E0 **−0,36 p.p. [−2,14; +1,38]**, IC inclui 0. E16 s0: **−13,31 p.p. [−19,49; −7,27]**, McNemar b=74/c=235, p=8,9e-20.
+- **Leitura E15:** com o NWD em pixels na loss **e** no assigner, a identificação de espécie no TEST **não muda** (Δ macro-F1 +0,1 ± 2,8, IC do Δacc inclui 0) e a localização fina no VAL piora (mAP50:95 −1,5 ± 1,0, 3/3 negativos), igual ao E10 (§12: +0,5 ± 3,1 e −1,7 ± 0,4). O resultado nulo da §12 **não dependia do bug**. Objetos <32 px também não ganham (−1,8 ± 4,8). Efeitos por espécie com mesmo sinal em 3/3 seeds (exploratório, sem correção para múltiplas comparações): recall MV +3,1 ± 0,5 (também no E10: +4,6 ± 0,7 → provável efeito do assigner) e F1 MD −1,6 ± 1,2.
+- **Leitura E16:** o NWD puro em pixels **também colapsa** (best epoch 4, early stop na 34, `train/cls_loss` final 4,7 vs 0,5–0,9 nos E15). Logo, a frase da §12.1 "o colapso do E12 é artefato de implementação" **é forte demais**: o bug de unidade tornava o NWD da loss constante, mas sem o bug o NWD puro continua sem convergir (single-seed; E12 é outra campanha/dataset, magnitudes não comparáveis). Leitura segura: **"o NWD puro não converge nesta receita; um termo de sobreposição (CIoU) continua necessário"**, compatível com o gradiente ≈ 0 do NWD longe do alvo.
+- **Frase segura (substitui a anterior):** "Com o NWD calculado em pixels na loss e no assigner (3 seeds), nenhuma variante melhora a identificação de espécie além da variância entre seeds, e o NWD puro não converge."

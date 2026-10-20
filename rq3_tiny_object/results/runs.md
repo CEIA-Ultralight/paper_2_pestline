@@ -102,3 +102,17 @@ Slurm `ovx01` (`rq3_tiny_object/ovx/ovx_queue.sbatch` → Apptainer `pestline-rq
 | 2026-10-18 | 3433 (inferência) | 0,1,2 | SAHI (tile 512, ov 0.25) + TTA vanilla/aug + WBF ensemble dos 3 E0 | COMPLETED (DONE, TEST) | pendente (analyst) |
 
 | 35018 | chain_G_rq3_tuned_h100.sh | G0 e0_h100 s0-2, G1 nwd w0.5 C22 s0-2, G2 nwd w1.0 C44 s0-2, G3 nwd w0.5 C88 s0-1 | h100n2 | cancelado após G3 s1 (prazo); CSVs v9_g_tuned_*.csv |
+⚠️ 2026-10-18: nos 3 `E10_nwd_w0.5_s*` acima o NWD da **loss** estava em unidades de grid (saturado); só o do assigner estava correto (PAPER_FACTS §12.1). Ficam como histórico "NWD só no assigner".
+
+### Rerun NWD com a loss em pixels (2026-10-18)
+
+Fila `rq3_tiny_object/dgx1/wait_and_run.sh` → `run_queue.sh` (GPU 0), log da fila `~/pestline/logs/fila_e15_e16.log`. Patch com `FLYDET_NWD_LOSS_UNITS=px` e `FLYDET_NWD_DIAG=20` (diagnóstico nas 20 primeiras chamadas da loss). Mesmo container, dataset e receita da tabela acima.
+
+| Data | Job | Script | Commit (repo / fly_det) | Seed | Config | W&B (treino / test_eval) | Estado | CSV |
+|---|---|---|---|---|---|---|---|---|
+| 2026-10-18 | fila dgx1 GPU0 | `wait_and_run.sh` → `run_queue.sh` → `train_one.sh` | 4b8907d+fix NWD (não commitado) / b36580a | 0 | E15 NWD w=0,5 C=44 scope=both, loss em px | W&B `paper2_rq3`, run `E15_nwdfix_w0.5_s0` (id a preencher) | COMPLETED 11:21 (75 ép., best 45, 2,25 h; diag ok: `loss_units=px`, `target_max_in=240`, `nwd_mean` 0,79–0,90) | `v9_dgx1_nwd_*.csv` — PAPER_FACTS §12.2 |
+| 2026-10-18 | idem | idem | idem | 1 | E15 idem | `E15_nwdfix_w0.5_s1` | COMPLETED 13:19 (65 ép., best 35, 1,93 h) | idem |
+| 2026-10-18 | idem | idem | idem | 2 | E15 idem | `E15_nwdfix_w0.5_s2` | COMPLETED 16:34 (108 ép., best 78, 3,22 h) | idem |
+| 2026-10-18 | idem | idem | idem | 0 | E16 NWD puro w=1,0, loss em px (exploratório) | `E16_nwdpure_w1.0_px_s0` | COMPLETED 17:36 (34 ép., best 4, 1,01 h — colapso) | idem |
+
+Notas (2026-10-19): `FILA_OK` 18/out 17:36; os 4 com early stop (patience 30), 0 Traceback/ABORT/NaN nos logs. CSVs gerados na dgx1 (`~/pestline/_out_rq3_v9/`) com o gerador estendido e copiados para cá; linhas E0/E10 idênticas às de 2026-10-16. IDs W&B dos 4 runs ainda não anotados.

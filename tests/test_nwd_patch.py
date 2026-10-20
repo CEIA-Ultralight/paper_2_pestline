@@ -165,5 +165,78 @@ class TestNWDScope(unittest.TestCase):
             self.mod.apply_nwd_patch()
 
 
+class TestNWDLossUnits(unittest.TestCase):
+    """O ultralytics passa ao BboxLoss.forward caixas em grid (target/stride); o NWD da loss
+    precisa ser calculado em pixels (FLYDET_NWD_LOSS_UNITS=px) para C=44 px valer."""
+
+    def setUp(self):
+        import nwd_patch
+
+        self.mod = nwd_patch
+        self._saved = (nwd_patch.NWD_LOSS_UNITS, nwd_patch.NWD_MODE, nwd_patch.NWD_W, nwd_patch.NWD_C)
+        nwd_patch.NWD_MODE, nwd_patch.NWD_W, nwd_patch.NWD_C = "nwd", 0.5, 44.0
+        self._env = os.environ.get("FLYDET_NWD_LOSS_UNITS")
+
+    def tearDown(self):
+        (self.mod.NWD_LOSS_UNITS, self.mod.NWD_MODE, self.mod.NWD_W, self.mod.NWD_C) = self._saved
+        if self._env is None:
+            os.environ.pop("FLYDET_NWD_LOSS_UNITS", None)
+        else:
+            os.environ["FLYDET_NWD_LOSS_UNITS"] = self._env
+
+    def _loss_iou(self, units, stride_val):
+        """Chama o forward patchado como o v8DetectionLoss: caixas em grid, stride (N,1)."""
+        from ultralytics.utils.loss import BboxLoss
+
+        from nwd_patch import _patched_bbox_loss_forward
+
+        self.mod.NWD_LOSS_UNITS = units
+        n = 4
+        gt_px = torch.tensor([[100.0, 100.0, 140.0, 140.0]] * n)
+        pd_px = gt_px + torch.tensor([4.0, 2.8, 4.0, 2.8])  # W2 ~ 4,9 px
+        stride = torch.full((n, 1), stride_val)
+        li, _ = _patched_bbox_loss_forward(
+            BboxLoss(reg_max=1),  # YOLO26: reg_max=1 (sem DFL)
+            torch.zeros(1, n, 4),
+            (pd_px / stride).unsqueeze(0),
+            torch.full((n, 2), 15.0),
+            (gt_px / stride).unsqueeze(0),
+            torch.ones(1, n, 7) / 7,
+            torch.tensor(float(n)),
+            torch.ones(1, n, dtype=torch.bool),
+            torch.tensor([1920.0, 1920.0]),
+            stride,
+        )
+        return li.item(), pd_px, gt_px
+
+    def test_px_mode_matches_pixel_nwd_on_every_level(self):
+        from ultralytics.utils.metrics import bbox_iou
+
+        for s in (8.0, 16.0, 32.0):
+            li, pd_px, gt_px = self._loss_iou("px", s)
+            ciou = bbox_iou(pd_px, gt_px, xywh=False, CIoU=True)
+            nwd = nwd_similarity(pd_px, gt_px, 44.0)
+            expected = (1.0 - (0.5 * ciou + 0.5 * nwd)).mean().item()
+            self.assertAlmostEqual(li, expected, places=5, msg=f"stride={s}")
+            self.assertLess(nwd.mean().item(), 0.92)  # NWD em px nao satura
+
+    def test_grid_mode_reproduces_legacy_saturation(self):
+        for s in (8.0, 16.0, 32.0):
+            li_grid, pd_px, gt_px = self._loss_iou("grid", s)
+            nwd_grid = nwd_similarity(pd_px / s, gt_px / s, 44.0).mean().item()
+            self.assertGreater(nwd_grid, 0.98, msg=f"stride={s}")
+            li_px, _, _ = self._loss_iou("px", s)
+            self.assertLess(li_grid, li_px)  # legado: loss menor (termo NWD ~constante)
+
+    def test_invalid_loss_units_fails_fast(self):
+        os.environ["FLYDET_NWD_LOSS_UNITS"] = "metros"
+        with self.assertRaises(RuntimeError):
+            self.mod.resolve_loss_units()
+
+    def test_default_loss_units_is_legacy_grid(self):
+        os.environ.pop("FLYDET_NWD_LOSS_UNITS", None)
+        self.assertEqual(self.mod.resolve_loss_units(), "grid")
+
+
 if __name__ == "__main__":
     unittest.main()
