@@ -62,3 +62,6 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 
 ## 2026-10-19 — Ablação de margem do crop (M2) e controle de hardware
 - Jobs 34953 (pad 0 e 0,25; 6 classificadores, cascata VAL+TEST) e 34965 (pad 0,75 reavaliado na H100), ambos na h100n2 sob jail + gpu_watch, sem violações. Cascata piora com menos contexto (−2,5/−2,8 pp vs −0,9 pp em 0,75); nenhuma margem supera o detector sozinho. A fusão tardia (+1,3 pp na B200) vira +0,3 pp [−0,1;+0,7] na H100: não é robusta. PAPER_FACTS §11e.
+
+## 2026-10-20 — RQ3 cadeia G (h100n2, job 35018)
+G0 (controle H100) 3 seeds, G1 3, G2 3, G3 2 (s2 cancelada por prazo). Avaliação no TEST completo via cópia PNG (HEIC convertidos; harness ignora .heic → 64 imagens). Nenhum NWD ajustado supera o controle; w=1,0 colapsa (53,9%). Ver PAPER_FACTS §14. Rodada 10 do revisor: 3/5, 0F/5M/11m.

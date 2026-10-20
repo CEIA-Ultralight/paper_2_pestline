@@ -100,3 +100,5 @@ Slurm `ovx01` (`rq3_tiny_object/ovx/ovx_queue.sbatch` → Apptainer `pestline-rq
 | 2026-10-18/19 | 3396 (fila B) | 2 | E16 NWD scope=assigner | COMPLETED (DONE, TEST eval) | pendente (analyst) |
 | 2026-10-18 | 3395 (fila A) | 2 | E1 P2 (head P2) | COMPLETED (DONE, TEST eval) | pendente (analyst) |
 | 2026-10-18 | 3433 (inferência) | 0,1,2 | SAHI (tile 512, ov 0.25) + TTA vanilla/aug + WBF ensemble dos 3 E0 | COMPLETED (DONE, TEST) | pendente (analyst) |
+
+| 35018 | chain_G_rq3_tuned_h100.sh | G0 e0_h100 s0-2, G1 nwd w0.5 C22 s0-2, G2 nwd w1.0 C44 s0-2, G3 nwd w0.5 C88 s0-1 | h100n2 | cancelado após G3 s1 (prazo); CSVs v9_g_tuned_*.csv |

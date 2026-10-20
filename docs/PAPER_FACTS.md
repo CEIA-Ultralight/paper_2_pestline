@@ -423,5 +423,6 @@ Fonte: `rq3_tiny_object/results/v9_g_tuned_{runs,summary}.csv`; gerador `common/
 | G0 E0 (controle H100) | 3 | 82,2±1,9 | 84,4/80,7/81,6 | — |
 | G1 NWD w0,5 C22 | 3 | 81,7±1,5 | 83,2/80,3/81,6 | −0,50 pp [−2,67; +1,78] |
 | G2 NWD w1,0 C44 | 3 | 53,9±1,3 | 52,7/53,6/55,4 | −28,29 pp [−34,93; −21,44] |
-| G3 NWD w0,5 C88 | **1 (single-seed)** | 79,2 | 79,2 | −5,21 pp [−8,96; −1,49] |
+| G3 NWD w0,5 C88 | **2 (s2 cancelada por prazo)** | 81,8±3,7 | 79,2/84,5 | −0,70 pp [−3,02; +1,78] (por seed −5,21/+3,80) |
 Leitura: nenhum braço NWD ajustado supera o controle; w=1,0 degrada fortemente (colapso consistente nas 3 seeds). Controle H100 (82,2) coerente com L40S (81,7).
+Cadeia 35018 cancelada após G3 s1 (G3 s2 não rodou). Seeds de G3 divergem em 9 pp: resultado inconclusivo, não vantagem.
