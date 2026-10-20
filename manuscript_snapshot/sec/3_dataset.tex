@@ -4,12 +4,25 @@
 \subsection{Lineage and Acquisition Protocol}
 \label{sec:dataset:lineage}
 
-DS-F2 was built incrementally: the evaluated version, DS-F2\_v9.0.5, is the result of five successive batches of plates (v5.1, v6.0, v7, v8, v9), each added after inspecting the failure modes of the detector trained on the previous ones. Validation and test splits grew with the batches and share no file name or hash with training images; labels of shared images are identical except for a re-annotation of 62 images between v6.1.1 and v7.1.0. The data of the prior pipeline~\cite{pacbb2026} (here called v4: 1280$\times$720, six classes, plates dominated by insects and noise) share no image with DS-F2 and were acquired at lower resolution; they are therefore \emph{not} a subset of DS-F2, and the effect of the new data is measured on a ladder of cumulative training sets (Section~\ref{sec:exp:rq1}) rather than by removing images from the final split. All images are $1920\times1080$ photographs of industrial sticky traps at a fixed focal distance.
+DS-F2 was built from successive plate batches v5.1, v6.0, v7, v8 and v9, photographed at $1920\times1080$ (industrial sticky traps at a fixed focal distance). A batch is a collection of original images; the evaluated version, DS-F2\_v9.0.5, combines all five with annotations, splits and augmentation. The earlier v4 collection of the prior pipeline~\cite{pacbb2026} uses $1280\times720$ images and six classes; the recorded identity checks found no image in common between v4 and the later collections, so v4 is not a subset of DS-F2.
+% TODO(TEAM): complete the acquisition protocol (industrial setting, camera/focus configuration, focal distance, collection sites and periods; which elements of the prior SOP were retained; anonymize the partner).
+
+RQ1 fixes VAL and TEST to v9.0.5 and changes only the training set (Section~\ref{sec:exp:rq1}); labels are identical across versions except for 62 images re-annotated between v6.1.1 and v7.1.0. Name and hash checks found no exact training--evaluation overlap, but they do not establish whether different photographs of the same plate were assigned together.
+% TODO(TEAM): describe the original split-assignment procedure (grouping by plate, session or period; how augmented derivatives stayed with their source images).
 
 \subsection{Targeted Physical Collections}
 \label{sec:dataset:collections}
 
-The collections differ from the prior data in four verified ways. (i)~\emph{Species-pure plates}: from v6.0 on, each plate carries a single species (identified by a handwritten label on the plate: D, V, C, F for MD, MV, MC, MF; G for other insects), instead of the mixed-species plates of v5.1. (ii)~\emph{Crowding}: single-species plates with up to 75--77 specimens per image appear in v8 and v9 (maximum species instances per image: 42 in v5.1, 35 in v6.0, 34 in v7, 75 in v8, 77 in v9; 103, 71, 70, 252 and 373 training images for v5.1, v6.0, v7, v8 and v9). (iii)~\emph{Insect-only plates} (INS without any target species): 8, 20 and 40 images in v7, v8 and v9, which teach the detector not to assign a species to other insects. (iv)~\emph{Graduated plates}: a printed 8$\times$4 grid is present on \emph{all} plates of every version; what changed across versions is the quality and number of the plates prepared by the team in the laboratory (smooth and glue-coated), not the presence of the grid. Two further sources complement the plates: \emph{white-paper photographs} (DS-ORG: flies on white paper, one species per photograph, large objects, about 58 instances per image) present in v5.3.5--v8.1.1 and absent from v9.0.5, and \emph{instance copy-paste} from real annotated crops, present only in v9.0.5.
+The original plate-image batches (before augmentation) hold 97 (v5.1), 83 (v6.0), 70 (v7), 100 (v8) and 174 (v9) images; the maximum number of target instances in one image is 42, 35, 34, 75 and 77.
+
+\paragraph{Composition.}
+Batch v5.1 has mixed-species plates, v6.0 both kinds, later batches species-pure plates; handwritten plate identifiers associate D, V, C, F with MD, MV, MC, MF and G with INS. INS-only plates (no target species) appear in v7, v8 and v9 (8, 20 and 40 images) to reduce false assignments to the target classes. A printed $8\times4$ grid is present in all batches, including v4, so it does not distinguish the new collections.
+% TODO(TEAM): clarify whether ``graduated plates'' means the printed grid or another preparation protocol; describe plate-preparation changes only where supported by records.
+% TODO(TEAM): confirm INS-only counts for v5.1/v6.0 and collection dates for all batches.
+
+\paragraph{White-paper photographs and augmentation.}
+DS-ORG (flies on white paper, one species per photograph, about 58 instances per image) is in versions v5.3.5--v8.1.1 and absent from v9.0.5, which introduced instance copy-paste of real annotated crops. Generated images are not in the batch counts, which therefore differ from the RQ1 training counts.
+% TODO(TEAM): document why DS-ORG was removed from v9.0.5 (records show its absence, not the reason).
 
 \subsection{Classes and Statistics}
 \label{sec:dataset:classes}
