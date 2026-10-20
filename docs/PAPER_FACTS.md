@@ -415,3 +415,13 @@ Caveats: trainer grava "pad75" no metadado de pré-processamento mesmo nas marge
 
 ## 11f. Tabela por espécie, detector vs cascata (TEST, E0 × ConvNeXt-T CE, 9 pares, multi-seed; tabela `tab:persp`)
 Fonte: `rq2_cascade/results/v9_per_species_single_vs_cascade.csv`; gerador `common/analysis/rq2_per_species_table.py` (matching do harness: conf≥0,25, IoU≥0,5; precisão = GT casados com a classe correta / propostas rotuladas com a classe; erro de contagem = média por imagem de |n_pred − n_GT|, por imagem porque não há id de placa). Detector: MD R/P/F1 64,9/78,8/71,2; MV 87,9/69,0/77,3; MC 84,6/86,1/85,3; MF 86,0/82,9/84,4. Cascata: MD 61,4/70,4/65,5; MV 85,6/68,8/76,2; MC 84,3/86,3/85,3; MF 87,1/74,9/80,5. Macro-F1: 79,5 vs 76,9 (confere com §10.1). Erro de contagem (detector → cascata): MD 1,17→1,49; MV 1,67→1,96; MC 0,76→0,78; MF 0,83→1,41. Leitura: a cascata perde precisão em MF (−8,0 pp) e recall em MD (−3,5 pp); nenhuma espécie melhora de forma material. TEST, sem IC por espécie.
+
+## 14. RQ3 cadeia G — NWD ajustado + controle E0 na H100 (TEST 73 imgs, 1210 inst. de espécie; 2026-10-20)
+Fonte: `rq3_tiny_object/results/v9_g_tuned_{runs,summary}.csv`; gerador `common/analysis/rq3_g_tuned_analysis.py`; job 35018 (h100n2, jail+gpu_watch). Avaliação no TEST completo (cópia PNG `DS-F2_v9.0.5_evalpng`: 9 HEIC convertidos; sem isso o harness avaliava só 64 imagens). Todos os números TEST; H100 (não misturar com B200/L40S). Δ = diferença pareada por seed vs G0, IC95 bootstrap por imagem.
+| braço | seeds | acc média±dp | por seed | Δ vs G0 [IC95] |
+|---|---|---|---|---|
+| G0 E0 (controle H100) | 3 | 82,2±1,9 | 84,4/80,7/81,6 | — |
+| G1 NWD w0,5 C22 | 3 | 81,7±1,5 | 83,2/80,3/81,6 | −0,50 pp [−2,67; +1,78] |
+| G2 NWD w1,0 C44 | 3 | 53,9±1,3 | 52,7/53,6/55,4 | −28,29 pp [−34,93; −21,44] |
+| G3 NWD w0,5 C88 | **1 (single-seed)** | 79,2 | 79,2 | −5,21 pp [−8,96; −1,49] |
+Leitura: nenhum braço NWD ajustado supera o controle; w=1,0 degrada fortemente (colapso consistente nas 3 seeds). Controle H100 (82,2) coerente com L40S (81,7).

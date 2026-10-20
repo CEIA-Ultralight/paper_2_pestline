@@ -18,7 +18,7 @@ for RUN in G0_e0_h100_s{0,1,2} G1_nwd_w0.5_C22_s{0,1,2} G2_nwd_w1.0_C44_s{0,1,2}
   [[ -f $R/$RUN/test_eval_png/summary.json ]] && { echo "SKIP $RUN"; continue; }
   echo "EVAL $RUN"
   b200_apptainer /opt/venv/bin/python $REPO/rq2_cascade/eval_cascade_matrix.py \
-    --detector $R/$RUN/weights/best.pt --detector-names $RUN --data $U/datasets/DS-F2_v9.0.5_evalpng --split test \
+    --detector $R/$RUN/best.pt --detector-names $RUN --data $U/datasets/DS-F2_v9.0.5_evalpng --split test \
     --out $R/$RUN/test_eval_png || echo "FALHA $RUN"
 done
 echo EVAL_G_DONE

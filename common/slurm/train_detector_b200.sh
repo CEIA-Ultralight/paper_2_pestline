@@ -85,6 +85,17 @@ echo "========================================================================="
 
 if step_done "${WORK}/DONE"; then echo "SKIP ${RUN_NAME}: DONE"; echo "JOB→RUN ${WANDB_RUN_NAME}"; exit 0; fi
 
+# Reavaliacao de runs antigas cujo test_eval cobriu so 64 imagens (HEIC ignoradas): usa a GPU ja alocada a este job.
+for _R in ${REEVAL_RUNS-G0_e0_h100_s0 G0_e0_h100_s1}; do
+    _W="${RUNS_ROOT}/${_R}"
+    if [[ -f "${_W}/DONE" && ! -f "${_W}/test_eval_png/summary.json" && -d "${USER_ROOT}/datasets/DS-F2_v9.0.5_evalpng/images/test" ]]; then
+        echo "REEVAL ${_R}"
+        chain_run b200_apptainer /opt/venv/bin/python "${REPO}/rq2_cascade/eval_cascade_matrix.py" \
+            --detector "${_W}/best.pt" --detector-names "${_R}" \
+            --data "${USER_ROOT}/datasets/DS-F2_v9.0.5_evalpng" --split test --out "${_W}/test_eval_png" || echo "FALHA REEVAL ${_R}"
+    fi
+done
+
 # ------------------------- pesos pre-treinados (models/ no cwd do fly_det) ---
 if [[ ! -f "${WORK}/models/${MODEL}" ]]; then
     if [[ -f "${MODELS_DIR}/${MODEL}" ]]; then
