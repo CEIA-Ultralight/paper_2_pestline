@@ -167,17 +167,20 @@ BEST="${RUN_DIR}/weights/best.pt"
 ln -sfn "${BEST}" "${WORK}/best.pt"
 echo "BEST ${WORK}/best.pt -> ${BEST}"
 
-if ! step_done "${WORK}/test_eval/summary.json"; then
+# TEST com as HEIC convertidas para PNG (harness ignora .heic); sem a copia, usa DATA_ROOT
+EVAL_DATA_ROOT="${EVAL_DATA_ROOT:-${USER_ROOT}/datasets/DS-F2_v9.0.5_evalpng}"
+[[ -d "${EVAL_DATA_ROOT}/images/test" ]] || EVAL_DATA_ROOT="${DATA_ROOT}"
+if ! step_done "${WORK}/test_eval_png/summary.json"; then
     export WANDB_RUN_NAME_EVAL="${RUN_NAME}_test_eval"
     chain_run b200_apptainer /opt/venv/bin/python "${REPO}/rq2_cascade/eval_cascade_matrix.py" \
         --detector "${BEST}" --detector-names "${RUN_NAME}" \
-        --data "${DATA_ROOT}" --split test \
-        --out "${WORK}/test_eval" \
+        --data "${EVAL_DATA_ROOT}" --split test \
+        --out "${WORK}/test_eval_png" \
         --wandb --wandb-entity "${WANDB_ENTITY}" --wandb-project "${WANDB_PROJECT}" \
         --wandb-run-name "${WANDB_RUN_NAME_EVAL}"
     echo "JOB→RUN ${WANDB_RUN_NAME_EVAL}"
 else
-    echo "SKIP test_eval: ${WORK}/test_eval/summary.json"
+    echo "SKIP test_eval: ${WORK}/test_eval_png/summary.json"
 fi
 
 touch "${WORK}/DONE"
