@@ -270,7 +270,7 @@ Fonte: `RUNS_ROOT=/raid/user_marcospaulo/flydet_runs_v9`; geradores rastreados `
 | Acurácia do oráculo por tamanho (√wh, px) | <24: 85,7 (n=454); 24–32: 69,4 (159); 32–48: 81,2 (376); 48–64: 92,0 (207); ≥64: 99,5 (14). **Confundido com espécie** (MF concentra <24, MC ≥48) | TEST | `v9_oracle_by_size.csv` |
 | Risco × cobertura (média dos classificadores) | ver CSV | TEST/VAL | `v9_oracle_risk_coverage.csv` |
 
-Ressalvas: (i) IC percentil, **não BCa** (BCa e sign-flip por instância não implementados); (ii) o classificador com classe BG (8 classes) tem apenas 1 seed (126) até o re-treino; números BG não são fatos; (iii) fine-tune completo (lr 2e-5) nos modelos fundacionais, **não LP-FT**; (iv) 607 imagens de copy-paste no treino — vazamento VAL/TEST não verificado; (v) TIDE, score ciente de IoU e fusão com distribuição de classe do detector **não foram feitos** (o detector só grava top-1 + conf).
+Ressalvas: (i) IC percentil, **não BCa** (BCa e sign-flip por instância não implementados); (ii) o classificador com classe BG (8 classes) tem apenas 1 seed (126) até o re-treino; números BG não são fatos; (iii) fine-tune completo (lr 2e-5) nos modelos fundacionais, **não LP-FT**; (iv) 869 imagens de copy-paste no treino — vazamento VAL/TEST não verificado; (v) TIDE, score ciente de IoU e fusão com distribuição de classe do detector **não foram feitos** (o detector só grava top-1 + conf).
 
 ## 10. RQ2 no DS-F2_v9.0.5 (campanha oficial v9; gerado em 2026-10-06; **supera** §9 para o RQ2)
 
@@ -305,7 +305,7 @@ Detector 79,6; melhor τ=0,9 → ~79,8 (partes), 79,8 (BioCLIP 2), 79,3 (CE): ga
 
 
 ### 10.5 Verificação de vazamento treino → VAL/TEST (CPU; `common/analysis/leakage_check.py`; `rq2_cascade/results/v9_leakage_check.csv`)
-Método: correlação normalizada de miniaturas cinza (crops 32×32, com e sem espelhamento; imagens 48×48) contra todo o treino (1738 imagens, 607 de copy-paste). **Imagem inteira:** nenhuma imagem de VAL/TEST tem similaridade ≥ 0,98 com o treino (máx. 0,949 VAL; 0,962 TEST); ≥ 0,95: 0/52 VAL e 5/73 TEST. **Crops:** ≥ 0,98 em 82/2347 (3,5%) VAL e 161/3460 (4,7%) TEST (53 destes têm como vizinho mais próximo um crop de imagem de copy-paste); ≥ 0,95 em 11,3% e 11,9%. **Leitura:** sem duplicata de imagem; a similaridade alta de crops é compatível com fundo de cola dominando crops pequenos e **não prova vazamento** (sem controle com crops de treino contra treino). Conclusão permitida: "no near-duplicate images between train and VAL/TEST (cosine ≥ 0.98); a small share of crops are highly similar to training crops, which we could not attribute to copy-paste".
+Método: correlação normalizada de miniaturas cinza (crops 32×32, com e sem espelhamento; imagens 48×48) contra todo o treino (1738 imagens, 869 de copy-paste). **Imagem inteira:** nenhuma imagem de VAL/TEST tem similaridade ≥ 0,98 com o treino (máx. 0,949 VAL; 0,962 TEST); ≥ 0,95: 0/52 VAL e 5/73 TEST. **Crops:** ≥ 0,98 em 82/2347 (3,5%) VAL e 161/3460 (4,7%) TEST (53 destes têm como vizinho mais próximo um crop de imagem de copy-paste); ≥ 0,95 em 11,3% e 11,9%. **Leitura:** sem duplicata de imagem; a similaridade alta de crops é compatível com fundo de cola dominando crops pequenos e **não prova vazamento** (sem controle com crops de treino contra treino). Conclusão permitida: "no near-duplicate images between train and VAL/TEST (cosine ≥ 0.98); a small share of crops are highly similar to training crops, which we could not attribute to copy-paste".
 
 ### 10.6 Confusão, latência, localização e fusão tardia (CPU; `common/analysis/rq2_v9_extra.py`; CSVs `v9_confusion_single_vs_cascade.csv`, `v9_latency.csv`, `v9_localization.csv`, `v9_late_fusion_approx.csv`; TEST, multi-seed, 9 pares E0×CE)
 - Confusão E0 → cascata CE (% das instâncias GT): MD→MV 26,3→21,0 (Δ −5,3±3,5); MD→não-espécie 7,0→15,0 (Δ +8,0±5,1); MV→MD 1,4→6,3 (Δ +4,9±1,2); MV→não-espécie 4,7→1,5; MC→MV 11,7→13,1 (Δ +1,4±6,2); MC→não-espécie 3,0→0,7; MF→não-espécie 8,7→7,5; MF→missed 5,3 (igual).
@@ -395,7 +395,7 @@ Fonte: `rq1_data/results/ladder_composition.csv` (gerador `common/analysis/ladde
 | v7 | 56 | 14 | 70 | 70 |
 | v8 | 80 | 172 | 252 | 252 |
 | v9 | 139 | 234 | 373 | 373 |
-L0=103; L1=103+71+70=244; L2=244+252+373=869; L3=1738 = L2 + 869 copy-paste (um por imagem real). Os "97, 83, 70, 100, 174 imagens por lote" do texto antigo não tinham rastro e foram substituídos. **Inconsistência:** §14 (linha ~308) diz "607 de copy-paste"; a contagem por nome de arquivo dá 869 — o 607 não é usado no manuscrito e deve ser revisto antes de citar.
+L0=103; L1=103+71+70=244; L2=244+252+373=869; L3=1738 = L2 + 869 copy-paste (um por imagem real). Os "97, 83, 70, 100, 174 imagens por lote" do texto antigo não tinham rastro e foram substituídos. (O "607" antigo em §9/§14 foi corrigido para 869, a contagem por nome de arquivo e por construção L3 = 2×869.)
 
 ## 11d. Variantes da cascata (pós-processamento, CPU) — rodada 6, M2
 Fonte: `rq2_cascade/results/v9_cascade_variants{,_summary}.csv`; gerador `common/analysis/rq2_cascade_variants.py`; entradas `per_image_preds.jsonl` de `cascade_cross_{val,test}` (E0 s0–2 × CE s42/84/126 = 9 pares, copiadas da B200; avaliação original na B200). **Sem GPU nova; multi-seed (9 pares não independentes); w escolhido na VAL (que também escolheu os best.pt) e aplicado ao TEST.**
