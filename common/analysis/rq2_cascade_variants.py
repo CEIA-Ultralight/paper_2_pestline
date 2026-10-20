@@ -11,7 +11,7 @@ detector + probabilidades do classificador, ordem YOLO) e avalia, com o mesmo ma
   fuse4(w)    fuse(w) restrito ao conjunto de especies (propostas de especie; argmax entre as 4)
 w e escolhido na VAL (maior acuracia media nos 9 pares) e aplicado ao TEST.
 Saida: rq2_cascade/results/v9_cascade_variants.csv (por par) e v9_cascade_variants_summary.csv.
-Uso: python3 -I common/analysis/rq2_cascade_variants.py [RUNS_ROOT]
+Uso: python3 -I common/analysis/rq2_cascade_variants.py [RUNS_ROOT] [PAD: 00|25]
 """
 from __future__ import annotations
 
@@ -29,10 +29,13 @@ CLS = M.YOLO_CLASSES
 SP = [CLS.index(n) for n in M.SPECIES]
 WS = [round(0.05 * i, 2) for i in range(21)]
 RUNS = Path(sys.argv[1] if len(sys.argv) > 1 else "/raid/user_marcospaulo/flydet_runs_v9")
+PAD = sys.argv[2] if len(sys.argv) > 2 else ""   # "00"/"25": ablacao de margem (cascade_pad<P>_<split>, clf_..._pad<P>_s*)
+SUF = f"_pad{PAD}" if PAD else ""
+CLF_SUF = "" if PAD == "75" else SUF   # classificadores de referencia (pad 0.75) nao levam tag
 
 
 def load(split, det, clf):
-    p = RUNS / f"cascade_cross_{split}" / det / clf / "label_only" / "per_image_preds.jsonl"
+    p = RUNS / (f"cascade_pad{PAD}_{split}" if PAD else f"cascade_cross_{split}") / det / clf / "label_only" / "per_image_preds.jsonl"
     return [json.loads(line) for line in p.read_text().splitlines()]
 
 
@@ -103,7 +106,7 @@ def accuracy(records, variant, w=0.0):
 
 
 def main():
-    pairs = [(f"E0_s{d}", f"clf_convnext_t_ce_s{c}") for d in range(3) for c in (42, 84, 126)]
+    pairs = [(f"E0_s{d}", f"clf_convnext_t_ce{CLF_SUF}_s{c}") for d in range(3) for c in (42, 84, 126)]
     data = {s: {p: load(s, *p) for p in pairs} for s in ("val", "test")}
     sel = {}
     for variant in ("fuse", "fuse4"):
@@ -121,7 +124,7 @@ def main():
             out.append(row)
     cols = ["split", "detector", "classifier", "single", "cascade", "species4", "fuse", "fuse4"]
     res = REPO / "rq2_cascade" / "results"
-    with open(res / "v9_cascade_variants.csv", "w", newline="") as fh:
+    with open(res / f"v9_cascade_variants{SUF}.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=cols)
         w.writeheader()
         w.writerows({k: (round(v, 5) if isinstance(v, float) else v) for k, v in r.items()} for r in out)
@@ -141,7 +144,7 @@ def main():
             continue
         lo, hi = bootstrap_delta(data[r["split"]], pairs, r["variant"], sel.get(r["variant"], 0.0))
         r["ci95_lo"], r["ci95_hi"] = round(lo, 5), round(hi, 5)
-    with open(res / "v9_cascade_variants_summary.csv", "w", newline="") as fh:
+    with open(res / f"v9_cascade_variants{SUF}_summary.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(summ[0]))
         w.writeheader()
         w.writerows(summ)

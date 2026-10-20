@@ -56,7 +56,8 @@ for P in ${PADS}; do
             mkdir -p "${OUT}"; RESUME=(); [[ -f "${OUT}/last.pt" ]] && RESUME+=(--resume)
             chain_run b200_apptainer --pwd "${REPO}/rq2_cascade" /opt/venv/bin/python -m architecture_lab.train \
                 --data "${CROPS_P}" --out "${OUT}" --variant baseline --epochs 24 --patience 5 --batch 32 \
-                --img-size 384 --lr 8e-5 --seed "${S}" --workers 8 --max-hours 1.25 "${RESUME[@]}"
+                --img-size 384 --lr 8e-5 --seed "${S}" --workers 8 --max-hours 1.25 --wandb --wandb-entity "${WANDB_ENTITY}" --wandb-project "${WANDB_PROJECT}" \
+                --wandb-run-name "${RUN}-h100" "${RESUME[@]}"
         fi
         [[ -f "${OUT}/best.pt" ]] || { echo "ABORT: best.pt ausente em ${OUT}"; exit 1; }
         CLFS+=("${OUT}/best.pt"); CLF_NAMES+=("${RUN}")
