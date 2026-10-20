@@ -59,3 +59,6 @@ Fixes têm ID `F{rodada}-{k}` e status `open` → `fixed@<hash manuscript>` | `w
 
 ## 2026-10-19 — Variantes da cascata (M2) sem GPU
 - Checkpoints E0 e classificadores copiados da B200 (ssh, só leitura) para /raid/user_marcospaulo/flydet_runs_v9; jsonl da matriz também. `rq2_cascade_variants.py`: relabel só-espécies 4 NÃO ajuda (−1,4 pp); fusão tardia com score do detector dá +1,3 pp [+0,3;+2,3] no TEST, 9/9 pares (primeiro resultado positivo da cascata; w escolhido na VAL). Margem de crop (0%/25%) ainda por fazer (precisa retreinar classificador).
+
+## 2026-10-19 — Ablação de margem do crop (M2) e controle de hardware
+- Jobs 34953 (pad 0 e 0,25; 6 classificadores, cascata VAL+TEST) e 34965 (pad 0,75 reavaliado na H100), ambos na h100n2 sob jail + gpu_watch, sem violações. Cascata piora com menos contexto (−2,5/−2,8 pp vs −0,9 pp em 0,75); nenhuma margem supera o detector sozinho. A fusão tardia (+1,3 pp na B200) vira +0,3 pp [−0,1;+0,7] na H100: não é robusta. PAPER_FACTS §11e.

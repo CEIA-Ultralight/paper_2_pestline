@@ -401,3 +401,14 @@ L0=103; L1=103+71+70=244; L2=244+252+373=869; L3=1738 = L2 + 869 copy-paste (um 
 Fonte: `rq2_cascade/results/v9_cascade_variants{,_summary}.csv`; gerador `common/analysis/rq2_cascade_variants.py`; entradas `per_image_preds.jsonl` de `cascade_cross_{val,test}` (E0 s0–2 × CE s42/84/126 = 9 pares, copiadas da B200; avaliação original na B200). **Sem GPU nova; multi-seed (9 pares não independentes); w escolhido na VAL (que também escolheu os best.pt) e aplicado ao TEST.**
 Acurácia de espécie (all-GT), TEST, média dos 9 pares: single 0,8223; cascata (relabel total) 0,8135 (Δ −0,9 pp, IC95 imagem [−2,9; +1,2]); **species4** (reclassifica só propostas de espécie entre as 4) 0,8079 (Δ −1,4 pp [−2,9; +0,1]); **fusão tardia** w=0,55: 0,8353 (**Δ +1,3 pp, IC95 [+0,3; +2,3], 9/9 pares > single**); fusão restrita às 4 espécies (w=0,70): 0,8226 (Δ +0,0 pp [−0,03; +0,1]).
 Fusão: argmax_c [w·conf_det·1(c=classe_det) + (1−w)·p_clf(c)]; o head end-to-end só expõe classe top-1 e score (não a distribuição completa). VAL: fuse +0,2 pp (5/9 pares) — o ganho é maior no TEST que na VAL, não é "selecionado por overfit de VAL" mas o w foi escolhido nela.
+
+## 11e. Ablação da margem do crop e controle de hardware (H100) — rodada 7, M2
+Fonte: `rq2_cascade/results/v9_cascade_variants_pad{00,25,75}{,_summary}.csv`; gerador `common/analysis/rq2_cascade_variants.py <RUNS> <PAD>`; jobs Slurm 34953 (pad 0 e 0,25: crops GT do v9.0.5, ConvNeXt-T CE 3 seeds por margem, receita do paper) e 34965 (referência pad 0,75 reavaliada na H100 com os classificadores treinados na B200). Detectores E0_s0..2 (B200). **Tudo avaliado na H100; multi-seed (9 pares E0×clf, não independentes); w da fusão escolhido na VAL; IC95 por imagem (10 000 reamostragens).**
+TEST, acurácia de espécie, média dos 9 pares; Δ vs detector sozinho (single H100 = 0,8160; na B200 era 0,8223 — mesmos checkpoints, inferência difere entre GPUs):
+| margem (por lado) | cascata Δ [IC95] | species4 Δ | fusão tardia Δ [IC95] |
+|---|---|---|---|
+| 0 | −2,5 pp [−5,3; +0,6] | −1,1 pp | +0,03 pp [−0,02; +0,09] (w=0,75) |
+| 0,25 | −2,8 pp [−5,0; −0,3] | −2,3 pp [−3,8; −0,7] | +0,05 pp [−0,01; +0,13] (w=0,75) |
+| 0,75 (paper) | −0,9 pp [−3,1; +1,5] | −1,5 pp [−3,2; +0,3] | +0,3 pp [−0,1; +0,7] (w=0,65) |
+Leitura: mais contexto no crop reduz a perda da cascata, mas nenhuma margem supera o detector sozinho; a fusão tardia com o score do detector **não** é robusta: +1,3 pp [+0,3; +2,3] na B200 (§11d) e +0,3 pp [−0,1; +0,7] na H100 com a mesma configuração. Não reportar a fusão como ganho; reportar como "dentro do ruído de hardware". VAL: cascata −4,8 pp (0,25) e −3,4 pp (0,75) vs single.
+Caveats: trainer grava "pad75" no metadado de pré-processamento mesmo nas margens 0 e 0,25 (rótulo errado; margem real está no nome do run e em FLYDET_CROP_PAD); classificadores pad 0,75 treinados na B200, pad 0/0,25 na H100; margem de inferência igual à de treino em cada caso.
