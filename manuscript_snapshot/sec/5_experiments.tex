@@ -136,6 +136,9 @@ YOLO11m (1 seed) & 81.0 & $-1.2$ [$-4.4$, $+2.1$] & 1.00 & 76.3 & 83.0 & 90.5 \\
 }
 \end{table}
 
+\paragraph{Tuned NWD against a same-GPU control.}
+Because the variants above used one setting, we trained NWD (loss and assigner) with other constants on the H100, next to its own E0 control (three seeds, $82.2\pm1.9$\%, consistent with the L40S control). $w{=}0.5$, $C{=}22$\,px gives $81.7\pm1.5$\% ($-0.5$ [$-2.7$, $+1.8$] pp); $w{=}1.0$, $C{=}44$\,px collapses to $53.9\pm1.3$\% ($-28.3$ [$-34.9$, $-21.4$] pp, all three seeds); $w{=}0.5$, $C{=}88$\,px, with one seed only, gives $79.2$\% ($-5.2$ [$-9.0$, $-1.5$] pp). None beats the control, and the sensitivity to the weight is large, so a small grid does not rescue NWD here.
+
 \paragraph{Recall by object size.}
 The smallest objects do not benefit from any variant: the recall below 32\,px is at most equal to E0 (E0 79.4\%, NWD assigner-only 79.4\%) and lower for all others, down to 63.3\% for NWD+RFLA (Table~\ref{tab:rq3_main}). The gains above 48\,px (0.6 to 2.9\,pp) come with a seed spread of 1--5\,pp and are not statistically supported. This agrees with the localization result of RQ2: E0 localizes $97.7\pm0.4$\% of the species instances, so a box-similarity loss has little to repair and the smallest objects are limited by identification.
 
