@@ -337,7 +337,8 @@ Fonte: `rq1_data/results/{ablation_ladder,ablation_ladder_summary,ladder_*}.csv`
 - Recall por tamanho (<32 / 32–48 / ≥48 px, média de 3 seeds, ver `ladder_size_bins.csv`): ganho L0→L3 concentrado em objetos <32 px (~0,44→~0,81) e continua nas outras faixas.
 - FP de espécie em 6 placas só-INS (conf≥0,25, por seed): L0 74/87/66; L1 45/57/43; L2 0/0/0; L2ORG 0/3/2; L3 0/0/0. Salto entre L1 e L2 (placas v8/v9 com INS).
 - Placas densas (≥30 espécies; 7 placas, 230 GT): L0 ~0,59; L1 ~0,75; L2 ~0,79; L2ORG ~0,83; L3 ~0,84 — melhora, mas amostra pequena (7 placas), seeds ruidosas.
-- Recall MD (pior espécie): L0 0,44; L1 0,66; L2 0,69; L2ORG 0,64; L3 0,65 (dp até 0,13). Papel branco (L2→L2ORG) não melhora MD; ganho L2→L2ORG está em MF/MV.
+- Recall MD (pior espécie): L0 0,44; L1 0,66; L2 0,69; L2ORG 0,64; L3 0,65 (dp até 0,13).
+- MD→MV entre localizados (`ladder_confusion.csv`, seeds agrupadas): L0 27,0%; L1 24,4%; L2 21,2%; L2ORG 27,5%; L3 26,7% (Tabela 2 do manuscrito, 2026-10-21). Papel branco (L2→L2ORG) não melhora MD; ganho L2→L2ORG está em MF/MV.
 - H2 (confusão entre localizados, `ladder_confusion.csv`, seeds agrupadas): MC→MV 18,5% (L0) → 14,5% (L2) → 11,7% (L3); MV→MC 14,8% → 6,3% → 5,4%; MF→não-espécie 46% → 17% → 9%. **H2 (confusão inalterada) NÃO se sustenta integralmente**: MV↔MC cai, mas MC→MV persiste em ~12% em L3.
 - Ressalvas: L0 é pequeno (lote v5.1); quantidade e qualidade estão confundidas entre braços (controle de subamostra de L2 não rodado); L2ORG tem ORG≈42% do treino; cópia-e-cola só em L3 (L2→L3 mistura copy-paste + DS-ORG removido).
 
