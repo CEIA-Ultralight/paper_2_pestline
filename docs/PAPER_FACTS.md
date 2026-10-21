@@ -8,6 +8,11 @@
 >
 > **Auditoria 2026-09-26 (analyst):** todos os números de §2–§4 foram re-derivados do W&B (`pestline/fly-species`, runs `EVAL_E0_cascade_val_20260909T134157Z` e `test-campaign-036ef018`) e batem com os `.md` a ≤0,05 p.p. (exceções de arredondamento listadas em §8). Os números de §1 marcados `results.csv` **não são verificáveis neste nó** (`/raid/user_marcospaulo/fly-det` e `flydet_runs` ausentes em dgx-B200-1); o que existe no W&B é o *summary* (validação final do `best.pt`), que é outro protocolo — ver tabela 1b.
 
+> **Mapa de seções (leia antes de citar).** A numeração não é linear porque o arquivo foi crescendo por campanhas; os números do manuscrito citam estas seções, então não foram renumeradas.
+> - **Vigentes (v9, DS-F2_v9.0.5; TEST 73 imgs / 1210 inst.):** RQ1 §11, §11b, §11c · RQ2 §10 (10.1–10.6c), §11d–§11f · RQ3 §12 (V100: E0 × NWD), §12.1–12.2 (bug de unidade e rerun em px), §13 (L40S: variantes tiny-object), §14 (cadeia G, H100: NWD ajustado).
+> - **Históricas (não citar no paper):** §0–§8 (H100, single-seed, DS-F2_v8.1.1) e §9 (B200, DS-F2_v8.1.1); mantidas só por rastreabilidade.
+> - Nunca misturar hardware (B200/H100/L40S/V100) na mesma tabela: cada campanha de RQ3 tem o seu controle E0.
+
 ## 0. Estado dos dados (2026-09-22)
 
 | Item | Valor | Origem |
@@ -422,7 +427,7 @@ Caveats: trainer grava "pad75" no metadado de pré-processamento mesmo nas marge
 Fonte: `rq2_cascade/results/v9_per_species_single_vs_cascade.csv`; gerador `common/analysis/rq2_per_species_table.py` (matching do harness: conf≥0,25, IoU≥0,5; precisão = GT casados com a classe correta / propostas rotuladas com a classe; erro de contagem = média por imagem de |n_pred − n_GT|, por imagem porque não há id de placa). Detector: MD R/P/F1 64,9/78,8/71,2; MV 87,9/69,0/77,3; MC 84,6/86,1/85,3; MF 86,0/82,9/84,4. Cascata: MD 61,4/70,4/65,5; MV 85,6/68,8/76,2; MC 84,3/86,3/85,3; MF 87,1/74,9/80,5. Macro-F1: 79,5 vs 76,9 (confere com §10.1). Erro de contagem (detector → cascata): MD 1,17→1,49; MV 1,67→1,96; MC 0,76→0,78; MF 0,83→1,41. Leitura: a cascata perde precisão em MF (−8,0 pp) e recall em MD (−3,5 pp); nenhuma espécie melhora de forma material. TEST, sem IC por espécie.
 
 ## 14. RQ3 cadeia G — NWD ajustado + controle E0 na H100 (TEST 73 imgs, 1210 inst. de espécie; 2026-10-20)
-Fonte: `rq3_tiny_object/results/v9_g_tuned_{runs,summary}.csv`; gerador `common/analysis/rq3_g_tuned_analysis.py`; job 35018 (h100n2, jail+gpu_watch). Avaliação no TEST completo (cópia PNG `DS-F2_v9.0.5_evalpng`: 9 HEIC convertidos; sem isso o harness avaliava só 64 imagens). Todos os números TEST; H100 (não misturar com B200/L40S). Δ = diferença pareada por seed vs G0, IC95 bootstrap por imagem.
+Fonte: `rq3_tiny_object/results/v9_g_tuned_{runs,summary}.csv`; gerador `common/analysis/rq3_g_tuned_analysis.py`; job 35018 (h100n2, jail+gpu_watch). Avaliação no TEST completo (cópia PNG `DS-F2_v9.0.5_evalpng`: 9 HEIC convertidos; sem isso o harness avaliava só 64 imagens). Todos os números TEST; H100 (não misturar com B200/L40S). **† Perda legada: a cadeia G usou a loss NWD em unidades de grid (`FLYDET_NWD_LOSS_UNITS=grid`, default), isto é, sem a correção da §12.1; o NWD na loss estava saturado e só o assigner/escala C variam. A campanha com a loss em pixels (E15/E16) é a da §12.2 (V100).** Δ = diferença pareada por seed vs G0, IC95 bootstrap por imagem.
 | braço | seeds | acc média±dp | por seed | Δ vs G0 [IC95] |
 |---|---|---|---|---|
 | G0 E0 (controle H100) | 3 | 82,2±1,9 | 84,4/80,7/81,6 | — |

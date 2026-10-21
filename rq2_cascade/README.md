@@ -1,66 +1,40 @@
-# RQ2 — Arquitetura: cascata detector → classificador fine-grained
+# RQ2 — Identificação: cascata detector → classificador
 
-**Pergunta.** Desacoplar detecção de identificação — YOLO26m como detector (propostas) seguido de um
-classificador dedicado sobre os crops — supera o single-stage em **recall, precisão e F1 por espécie**?
-A que custo (mAP, latência, estabilidade entre seeds)? A confusão MC↔MV / MF↔BF tida como "irredutível" no
-PACBB se reduz?
+**Pergunta.** Um detector genérico (YOLO26m, E0) seguido de um classificador fine-grained sobre os crops (margem 0,75) supera o detector único em recall, precisão e F1 por espécie? E até onde qualquer classificador chega com crops perfeitos?
 
-**Hipótese.** Uma rede que precisa localizar um inseto de ~40 px e discriminar espécie ao mesmo tempo compromete
-a representação; um classificador dedicado sobre o crop recupera a identificação — mas re-rotular sem re-ranquear
-reduz AP.
+## Resultado (campanha oficial v9, DS-F2_v9.0.5, TEST de 73 imagens)
 
-## O que já temos (single-seed, seed 42 salvo indicação)
+- Com esta receita (detector congelado, margem de 75 %, fusão só por rótulo), a cascata **não melhora** o detector em nenhuma das 15 configurações (macro-F1 de −1,1 a −5,1 pp) e custa 30–67× o tempo de inferência. Também não ajudam o relabel só entre espécies, a fusão tardia, outras margens de crop, o fundo como classe (BG) nem a abstenção híbrida.
+- A acurácia com crops de verdade (oráculo) satura em **82,7–83,8 %** para cinco classificadores em quatro backbones (três deles foundation models); 4,9 % das instâncias erram nos 15 classificadores, 69 % dos erros são confiantes e 79 % caem na família MD/MV/MC.
+- A VAL inverte o sinal em alguns pares, o que confirma que ela não é held-out.
+- Números e ICs em `docs/PAPER_FACTS.md` §10 e §11d–§11f.
 
-> **Exportado em 2026-09-26** (analyst): `results/cascade_test_single_seed.csv`, `cascade_val_single_seed.csv`,
-> `classifiers_single_seed.csv`, `runs.md`. Achados: o resultado principal é a política **label_only**; o controle CE
-> seed 42 (F1 74,95) ≈ partes (75,35) → o ganho vem de **cascatear**, não da cabeça de partes; partes seed 84
-> label_only dá P 63,7 / R 77,9 / **F1 70,1 (abaixo do E0)**. Seções 4.2/4.4 e 5.2 escritas (manuscript 77459a1).
+## Scripts
 
-| Item | Onde | Valor |
-|---|---|---|
-| Extração de crops (GT e propostas do YOLO) | `extract_crops.py`, `extract_proposal_crops.py`, `slurm/extract_proposal_crops.sh` | propostas cobrem 94,9 % dos GT / 97,9 % das espécies (VAL) |
-| Treino de classificadores (Swin-T, ConvNeXt-T/S, focal, SupCon, ArcFace, "atenção a partes") | `train_classifier.py`, `architecture_lab/{models,train,campaign,followup,diagnose,roi}.py`, `slurm/E3*.sh E4*.sh E5*.sh` | melhor individual: **ConvNeXt-T 384 partes** (F1 76,0 % TEST) |
-| Avaliação da cascata (harness próprio, 7 classes) | `eval_yolo_cascade.py`, `slurm/eval_yolo_cascade.sh`, `val_cascade_study.py`, `slurm/val_study.sh` | VAL: YOLO 80,4 % → cascata 84,6 % espécie correta; mAP50 81,2 → 77,3 |
-| Políticas de fusão (só classe / score produto / limiar) | `policy_study.py`, `slurm/policy_study.sh` | score produto ligeiramente melhor que só classe |
-| Cabeças alternativas / RoI sobre features YOLO | `test_campaign_heads.py`, `test_campaign_roi.py` | RoI head pior que classificador dedicado |
-| Limpeza de fundo com SAM | `sam_clean_crops.py`, `slurm/E4_sam_clean.sh` | **piorou** (71,8 % vs ≈79 %) |
-| DINOv2 como backbone | `slurm/dinov2.sh` | ver `docs/ARCHITECTURE_NIGHT.md` |
-| Cabeça P2 no YOLO (alternativa single-stage) | `slurm/E1_yolo26m_p2.sh` | **piorou** (F1 67,5 %) |
-| Orquestração noturna / monitor | `architecture_lab/campaign.py`, `monitor_*.py`, `slurm/architecture_*.sh`, `slurm/followup*.sh` | histórico em `docs/ARCHITECTURE_NIGHT.md` |
-| **Resultado principal (TEST, 918 espécies)** | `docs/PAPER_FACTS.md §3`, `docs/CASCADE_RESULTS_20260909.md` | recall 75,7 → **80,1 %**; precisão 70,9 → 71,2 %; F1 73,2 → **75,3 %**; mAP50 76,8 → 72,1 % (−4,7); 25 → 463 ms/img (≈18×) |
-| Por espécie (P/R %) | idem | MD 69,5/54,3 → 66,8/**66,2**; MV 56,1/83,6 → 60,8/86,9; MC 82,3/85,3 → 87,6/**81,2** (recall cai); MF 79,7/78,3 → 73,5/**84,4** |
-| Seed 84 (baseline e partes) | `docs/RELATORIO_TESTE_20260909*.md` (no fly-det) | F1 70,1–72,6 % — **abaixo** da seed 42; sinal do Δ F1 pode inverter |
-| Ensemble 3 classif. + TTA (exploratório, escolhido após ver o TEST) | `docs/PAPER_FACTS.md §3–4` | F1 76,4 %, 662 ms/img — **não usar como resultado principal** |
-| Testes CPU | `../tests/test_yolo_cascade.py`, `test_policy_study.py`, `test_test_campaign_heads.py`, `test_extract_proposal_crops.py` | |
+| Etapa | Arquivo |
+|---|---|
+| Extração de crops (verdade e propostas do detector) | `extract_crops.py`, `extract_proposal_crops.py`, `sam_clean_crops.py` |
+| Treino dos classificadores (ConvNeXt-T/S, Swin, foundation models, perdas CE/focal/SupCon/ArcFace) | `train_classifier.py`, `architecture_lab/`, `slurm/train_classifier_b200.sh`, `slurm/chain_B_classifiers.sh` |
+| Avaliação da cascata (matriz detector × classificador, 7 classes) | `eval_cascade_matrix.py`, `eval_yolo_cascade.py`, `slurm/chain_core_v9.sh`, `slurm/chain_D_cascade_cross.sh` |
+| Oráculo em crops verdadeiros | `eval_oracle_crops.py` |
+| Extras v9 (BG, margens 0/25/75 %, curva de aprendizado) | `slurm/chain_extras_v9.sh`, `slurm/chain_pad_ablation_h100.sh`, `slurm/chain_pad75_ref_h100.sh` |
+| Políticas de fusão e estudo de VAL | `policy_study.py`, `val_cascade_study.py`, `label_issues.py` |
+| Análise (bootstrap pareado BCa, permutação, McNemar, confusão, latência, localização, fusão tardia) | `common/analysis/rq2_v9_analysis.py`, `rq2_v9_extra.py`, `rq2_v9_summary.py`, `rq2_v9_lc_bg.py`, `rq2_cascade_variants.py`, `rq2_per_species_table.py`, `make_crop_fraction.py` |
+| Cabeças alternativas sobre features do YOLO (exploratório) | `test_campaign_heads.py`, `test_campaign_roi.py` |
 
-## O que falta
+## `results/`
 
-> **Campanha B200 (2026-09-27, cadeias B/D, analyst `e1d4bbe`, PAPER_FACTS §9)** fechou: multi-seed 3 det × 6 clf,
-> McNemar + bootstrap por imagem, confusão single vs cascata, oráculo de crops GT, latência, AP por classe.
-> Resultado: cascata E0×CE TEST R +3,0±2,2 / P −2,2±2,6 / F1 +0,1; acc|loc 77,0→80,1; oráculo 79,6±0,5 % (cascata
-> no teto); erro loc 2,1 % vs id ~20 %; MD→MV ~30 % e MC→MV ~15 % **não mudam** com CE (parts: MD→MV −12,7, MV→MD +5,9);
-> VAL inverte o sinal (VAL não é held-out). **Contradiz a tese atual** → `\TODO{AUTHOR DECISION}` no manuscrito (a235828).
+Os arquivos `v9_*` são os **vigentes**; os demais (sem prefixo) são das campanhas preliminares em DS-F2_v8.1.1 (H100/B200) e ficam como histórico rastreável, não entram no artigo.
 
-- [x] Multi-seed do classificador e do detector, McNemar, confusão, latência (B200; `results/*.csv`).
-- [ ] **Plano de exaustão da RQ2 (proposto 2026-09-30, aguardando aprovação)** — revisão de literatura em
-      `docs/related_work_map.md` §"RQ2 — revisão 2026-09-30":
-  - P0 CPU: TIDE single vs cascata; oráculo inverso (caixas do detector + classe GT); re-ranqueamento/calibração
-    (temperature scaling, fusão aprendida, top-2) com AP por espécie; oráculo estratificado por tamanho/nitidez/densidade;
-    risco–cobertura e abstenção hierárquica (família); confusão CE vs parts multi-seed; bootstrap por imagem como teste primário.
-  - P0 GPU/humano: ruído de rótulo — confident learning (5-fold OOF nos crops GT) + re-anotação cega de ~150 crops
-    MD/MV/MC por especialista (κ).
-  - P1 GPU: backbone foundation (DINOv3, BioCLIP 2, LP-FT) × 3 seeds; fusão tardia YOLO+classificador (aproximada feita; real pendente); curva de
-    sensibilidade à resolução do crop; cascata sobre yolo26l (E7); benchmark de latência dedicado.
-  - P2: crop duplo (justo + contexto), perda hierárquica, treino robusto a ruído (só se ruído ≥ 5 %).
-- [ ] Declarar seleção de modelo: VAL usada para `best.pt` → não é held-out; TEST já consultado → "consolidado".
-- [ ] Figuras: `fig_cascade_tradeoff.pdf`, `fig_confusion.pdf`, `fig_oracle_decomp.pdf`, exemplos qualitativos MD→MV.
+| CSV | Conteúdo |
+|---|---|
+| `v9_cascade_summary.csv`, `v9_cascade_aggregate.csv`, `v9_bootstrap_delta_f1.csv`, `v9_mcnemar.csv` | cascata × detector: ΔF1, ICs, testes pareados |
+| `v9_cascade_variants*.csv` (`pad00`, `pad25`, `pad75`), `v9_late_fusion_approx.csv`, `v9_hybrid_abstention.csv` | variantes de cascata e de margem |
+| `v9_oracle_*.csv` | oráculo: resumo, por tamanho, confiança, família, concordância, risco–cobertura, fundo |
+| `v9_per_species_single_vs_cascade.csv`, `v9_confusion_single_vs_cascade.csv` | por espécie e confusão |
+| `v9_latency.csv`, `v9_localization.csv`, `v9_learning_curve.csv`, `v9_leakage_check.csv` | latência, localização, curva de aprendizado, verificação de vazamento |
+| `runs.md` | job Slurm → run W&B (`paper2-rq2-cascade`) |
 
-## Saídas esperadas em `results/`
+## Limitações declaradas
 
-- `cascade_test_seeds.csv` — seed_det, seed_clf, classificador, recall/precisão/F1 por espécie, mAP50, ms/img.
-- `confusion_single_vs_cascade.csv`, `mcnemar.csv`, `latency.csv`.
-
-## Estado final da campanha v9 (2026-10-08)
-- Feito: 5 backbones × 3 detectores, BG ×3 seeds (sem ganho), confident learning, bootstrap BCa + permutação, McNemar, confusão single×cascata, latência, localização, fusão tardia aproximada, curva de aprendizado (platô no TEST). Texto em `manuscript/sec/5_experiments.tex` (`sec:exp:rq2v9`).
-- Não feito (declarado como limitação): TIDE, re-pontuação ciente de IoU, oráculo por nitidez/aglomeração, fusão tardia com scores reais do detector, RF-DETR+DINOv2, re-anotação por especialista.
-- Pendente do autor: figuras (`fig_cascade_tradeoff`, `fig_confusion`, `fig_oracle_decomp`), refs ausentes (PMC6262731, PMC13283985, TOOD, TSCODE, VarifocalNet), TODOs de decisão.
+Receita única de cascata (detector congelado, label-only); não foram feitos TIDE, re-pontuação ciente de IoU, oráculo por nitidez ou aglomeração, fusão tardia com scores reais do detector nem re-anotação por especialista. Os 15 pares compartilham detectores e classificadores, logo não são independentes.

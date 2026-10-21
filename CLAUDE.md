@@ -5,8 +5,8 @@ Detecção/identificação de moscas (YOLO26, 7 classes MD MV MC MF INS NOISE MA
 RQ1 dados (fora desta campanha), RQ2 cascata detector→classificador, RQ3 tiny-object. **Responder em português.**
 
 ## Estado e fontes da verdade
-- Estado, jobs, resultados e plano RQ2: `docs/HANDOFF_CURSOR.md` (2026-09-30; confira `squeue`/`runs.md` antes de confiar nos jobs).
-- Números: `docs/PAPER_FACTS.md` §9. Decisões já tomadas (não reabrir): `docs/DECISIONS.md`. Histórico: `docs/LEDGER.md`.
+- Estado e resultados: `docs/PAPER_FACTS.md` (mapa de seções no topo), `docs/LEDGER.md`; jobs em `rq*/results/runs.md` (confira `squeue`). Planos e handoffs antigos: `docs/archive/`.
+- Números vigentes: `docs/PAPER_FACTS.md` §10–§14 (§0–§9 são históricos). Decisões já tomadas (não reabrir): `docs/DECISIONS.md`. Histórico: `docs/LEDGER.md`.
 - Backlog por RQ: `rq*/README.md`. Literatura: `docs/related_work_map.md`.
 - Papéis (scholar, experimenter, slurm-runner, analyst, illustrator, writer, fact-checker, R1–R5, area-chair): `.github/agents/*.agent.md`.
   Use o corpo do arquivo como prompt ao desempenhar o papel; nomes de modelo no frontmatter são do Copilot, ignore.
@@ -31,7 +31,7 @@ Violação = bloqueio automático de acesso + penalidade financeira.
 ## Comandos
 - Testes (CPU): `_scratch/venv_tests/bin/python -m pytest tests -q` (referência: 125 passed, 25 skipped).
 - LaTeX: `cd manuscript && TECTONIC_CACHE_DIR=../_scratch/tectonic_cache tectonic -X compile main.tex --outdir _build`.
-- Container/dataset/modelos/saídas: ver tabela em `docs/HANDOFF_CURSOR.md` §2 (campanha oficial v9: `DATA_ROOT=.../datasets/DS-F2_v9.0.5`, `RUNS_ROOT=/raid/user_marcospaulo/flydet_runs_v9/`, W&B `paper2-ds-f2-v9`).
+- Container/dataset/modelos/saídas: ver `common/slurm/b200_common.sh` e `docs/archive/HANDOFF_CURSOR.md` §2 (campanha oficial v9: `DATA_ROOT=.../datasets/DS-F2_v9.0.5`, `RUNS_ROOT=/raid/user_marcospaulo/flydet_runs_v9/`, W&B `paper2-ds-f2-v9`).
 
 ## Convenções não óbvias
 - **Cadeia de custódia:** nenhum número vai para `manuscript/` sem CSV em `*/results/` e linha em `docs/PAPER_FACTS.md`. Marcar `VAL` vs `TEST` e `single-seed` vs `multi-seed`. VAL foi usada para escolher `best.pt` → não é held-out.

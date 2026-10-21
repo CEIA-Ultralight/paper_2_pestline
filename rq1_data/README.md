@@ -1,57 +1,49 @@
-# RQ1 — Dados: evolução dirigida do dataset (STID → DS-F2_v8.1.1)
+# RQ1 — Dados: escada de conjuntos de treino
 
-**Pergunta.** Estender o dataset STID (paper anterior, PACBB 2026) com *coletas físicas dirigidas* —
-(1) placas de **crowding** da mesma espécie, (2) placa **graduada** (escala), (3) **papel em branco** (negativo puro),
-(4) **copy-paste de instâncias reais** anotadas — melhora a detecção por espécie?
+**Pergunta.** Estender o dataset com coletas físicas dirigidas (placas de crowding, placa graduada, papel em branco, copy-paste de instâncias reais) melhora a leitura por espécie?
 
-**Hipótese pré-registrada (autor, 26/09; já escrita como H1/H2 em `manuscript/sec/5_experiments.tex` @ `09eba69`).**
-- **H1 (detecção melhora, onde esperado):** as coletas dirigidas atacam falhas do PACBB (oclusão em crowding,
-  variação de escala, FP em fundo limpo, espécie rara); mAP@50 e recall geral sobem, com ganho *localizado* nas
-  métricas correspondentes (recall por bin de tamanho, recall em placas de crowding, FP em placas em branco).
-- **H2 (identificação não se move):** a confusão MC↔MV / MF↔MC entre objetos localizados **não** muda de forma
-  mensurável (IC bootstrap da diferença cobre zero) entre STID-only e DS-F2 completo. Só a cascata (RQ2) a reduz.
-- **Desenho:** STID-only vs DS-F2_v8.1.1, YOLO26m receita E0, seeds 0/1/2, mesmo TEST (55 img / 918 inst.),
-  média±std + McNemar pareado + IC bootstrap (`common/stats.py`, `rq2_cascade/eval_cascade_matrix.py`).
+**Desenho.** Cinco conjuntos de treino cumulativos de DS-F2_v9.0.5 (L0, L1, L2, L2ORG, L3), YOLO26m com a receita E0, seeds 0/1/2, mesmo VAL e TEST (73 imagens) em todos os braços; só o treino muda.
 
-## O que já temos
+| Braço | Conteúdo |
+|---|---|
+| L0 | lote v5.1 (originais + aumentos de imagem) |
+| L1 | L0 + v6.0 + v7 |
+| L2 | L1 + v8 + v9 (sem copy-paste) |
+| L2ORG | L2 + DS-ORG (papel em branco, v8.1.1) |
+| L3 | DS-F2_v9.0.5 completo = L2 + copy-paste (reaproveita os runs `E0_s{0,1,2}` da RQ2) |
 
-| Item | Onde | Observação |
-|---|---|---|
-| Linhagem confirmada: DS-F2_v8.1.1 = STID (PACBB) + coletas novas | usuário, 25/09 | STID é **subconjunto** do DS-F2 → ablação é viável |
-| Dataset atual: 1.259 train / 35 val (617 GT espécies) / 55 test (918 GT espécies), 7 classes, 1920×1080 | `docs/PAPER_FACTS.md §0` | mean √wh = 44,4 px |
-| Scripts de construção/curadoria do YOLO dataset | `yolo_restructure.py`, `filter_classes.py`, `change_class.py`, `clean_labels.py`, `recover_labels.py`, `rename_files.py`, `replay_renaming.py`, `update_overwrite.py`, `yolo_legacy_dataset.sh` | copiados de `fly-det/scripts/` sem alteração |
-| Fatiamento (para experimentos em tiles) | `slice_dataset.py` | usado em "treino em tiles 512" (F1 igual ao baseline) |
-| Copy-paste de instâncias | `baseline/fly-det/fly_det/augment.py` (E9) | run E9: **nome e mAP50 desconhecidos** (job do usuário) |
-| Treino em múltiplos datasets | `train-many-datasets.sh`, `slurm/yolo_extended.sh` | base para a ablação STID-only vs full |
-| Números do PACBB para a seção de evolução | `docs/prior_work/pacbb2026_extract.txt` | Clean 0,476 → Onto 0,381 → SOP **0,608** (YOLO26-S); classes FF/HF/BF/MF/OI/Noise |
+O controle de mesmo tamanho treina subamostras aleatórias do L3 com 103, 244 e 869 imagens (3 seeds cada) e compara com L0, L1 e L2.
 
-## O que falta
+## Resultado
 
-- [ ] **Rastreio das coletas novas dentro do DS-F2_v8.1.1** — lista de imagens (por nome/pasta/metadado) que
-      pertencem a cada tipo de coleta (crowding / graduada / branco / copy-paste). Sem isso a ablação não existe.
-- [ ] **Mapeamento de classes STID ↔ DS-F2** (⚠️ colisão de siglas: no PACBB `MF` = flesh fly; aqui `MF` = fruit fly,
-      `MC` = flesh fly). Tabela obrigatória na Seção 3 do paper.
-- [ ] **Regra do split** (por placa/período?) — confirmar procedimento e descrever no paper.
-- [ ] **Ablação (Opção B — decidida 26/09)**: treinar YOLO26m em STID-only vs DS-F2 completo, mesmo TEST, seeds 0/1/2
-      (6 treinos, ~1–1,8 h cada no B200 ≈ 8 GPU-h). Entra na fila após as cadeias C/D. O braço DS-F2 completo
-      **reutiliza os 3 E0 da cadeia A** (mesma receita/seeds) → só 3 treinos novos (STID-only).
-- [ ] **Fixar antes dos treinos:** limites dos bins de tamanho √wh (candidato 32/48 px, coerente com RQ3); nº de
-      reamostragens do bootstrap; McNemar por par de seeds vs pooled.
-- [ ] **Verificar se o TEST tem placas em branco e de crowding em número suficiente**; senão, held-out dedicado
-      (dizer na legenda de `tab:rq1_ablation`).
-- [ ] Identificar a **espécie menos frequente** (linha copy-paste de `tab:rq1_mapping`).
-- [ ] Seção 3: descrever como os rótulos STID foram mapeados/reanotados nas 7 classes do DS-F2.
-- [ ] Preencher `tab:rq1_ablation` (todas as células), `tab:rq1_mapping`, `fig:rq1_confusion` (duas matrizes 7×7
-      entre objetos localizados, seeds pooled) e reescrever o parágrafo de falsificação após os resultados.
-- [ ] Recuperar o run **E9 (copy-paste)**: nome no W&B e mAP50, ou reexecutar.
-- [ ] Estatísticas do dataset para a tabela do paper: nº de placas por tipo de coleta, instâncias por espécie
-      por split, histograma de tamanho de objeto → `results/dataset_stats.csv`.
-- [ ] Decisão: **liberar o DS-F2 publicamente?** (parceiro industrial) — define se o dataset é contribuição.
-- [ ] Figura: exemplos de cada tipo de coleta dirigida → `figures/out/fig_collections.pdf`.
+- Acurácia de espécie (= recall micro nas quatro espécies) sobe de **56,1 %** (L0) para **82,2 %** (L3); os maiores ganhos são em objetos < 32 px e em placas só com insetos.
+- Em 244 e 869 imagens, a subamostra aleatória do L3 iguala L1 e L2: de L1 a L2 o ganho é majoritariamente quantidade. Em 103 imagens a subamostra aleatória fica **19 pp** acima de L0, então o degrau L0 não é só quantidade.
+- Quantidade, qualidade do rótulo e domínio variam juntos; o resultado é reportado como associação, não como causalidade. Números e IC em `docs/PAPER_FACTS.md` §11, §11b, §11c.
 
-## Saídas esperadas em `results/`
+## Scripts
 
-- `dataset_stats.csv` — contagens por split × classe × tipo de coleta.
-- `ablation_stid_vs_full.csv` — run, seed, subset, mAP50 (harness 7 classes), P/R/F1 micro, recall por bin de tamanho,
-  recall em crowding, FP por placa em branco, correct|localized, taxas MC↔MV e MF↔MC (TEST); média±std e Δ com IC 95 %.
-- `stid_subset.txt` — lista de imagens do subconjunto STID-only (saída do rastreio).
+| Etapa | Arquivo |
+|---|---|
+| Montar os braços (hardlinks a partir do v9.0.5) | `make_ladder.py`, `make_equalsize.py` |
+| Treino em cadeia (12 treinos; 4 do controle) | `slurm/chain_rq1_ladder.sh`, `slurm/chain_rq1_equalsize_h100.sh` |
+| Análise da escada (acurácia, IC por imagem, McNemar, recall por tamanho) | `common/analysis/rq1_ladder_analysis.py` |
+| Controle de mesmo tamanho, composição por lote, curva de aprendizado | `common/analysis/rq1_equalsize.py`, `ladder_composition.py`, `rq1_learning_curve.py` |
+| Inventário das versões do dataset (sobreposição, vazamento, origem) | `common/analysis/rq1_version_*.py`, `rq1_origin_profile.py`, `rq1_v4_in_v9.py`, `leakage_check.py` |
+| Figura de confusão L0 × L3 | `common/analysis/rq1_confusion_fig.py` |
+| Construção do dataset a partir do STID (legado, copiado do baseline) | `yolo_restructure.py`, `filter_classes.py`, `change_class.py`, `clean_labels.py`, `recover_labels.py`, `rename_files.py`, `replay_renaming.py`, `update_overwrite.py`, `slice_dataset.py`, `yolo_legacy_dataset.sh`, `train-many-datasets.sh`, `slurm/yolo_extended.sh` |
+
+## `results/`
+
+| CSV | Conteúdo |
+|---|---|
+| `ablation_ladder.csv`, `ablation_ladder_summary.csv` | acurácia e recall por espécie, por seed e agregados |
+| `ladder_paired.csv` | Δ pareado entre braços, IC 95 % por imagem, McNemar |
+| `ladder_size_bins.csv`, `ladder_crowding.csv`, `ladder_insonly_fp.csv`, `ladder_confusion.csv` | recortes por tamanho, densidade, placas só-INS e confusão |
+| `equalsize_summary.csv`, `equalsize_prior_ovx.csv` | controle de mesmo tamanho (a segunda tabela traz runs anteriores de outra GPU) |
+| `ladder_composition.csv`, `learning_curve.csv` | composição por lote e curva de aprendizado |
+| `rq1_versions_*.csv`, `rq1_profile_*.csv`, `rq1_v4_in_v9.csv`, `rq1_versions_summary.md` | inventário e sobreposição entre versões do dataset |
+| `runs.md` | job Slurm → run W&B (`paper2-rq1-data`) |
+
+## Limitações declaradas
+
+Sem ID de placa, o split por placa não pode ser verificado e vazamento entre placas não é excluído; a origem dos rótulos e as definições de NOISE/MAR dependem do autor. A versão anterior (v4, 1280×720, 6 classes, outro teste) aparece só como linha histórica.

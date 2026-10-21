@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # chain_E_rq3_v9.sh — RQ3 na v9.0.5 (b200n1), 3 seeds por variante, 1 job sequencial.
-# Plano: docs/PLANO_FINAL_2026-10-16.md (bloco A1/A2). Base: chain_C_extra.sh.
+# Plano: docs/archive/PLANO_FINAL_2026-10-16.md (bloco A1/A2). Base: chain_C_extra.sh.
 #   1) NWD E10 w0.5 s{0,1,2}  2) GCD E11 s{0,1,2}  3) NWD+RFLA E14 s{0,1,2}
 #   4) SAHI nos 3 E0   5) TTA + WBF nos 3 E0 (TEST)   6) P2 E1 s{0,1,2} (por ultimo: maior risco de OOM)
 # Receita identica a E0 (train_detector_b200.sh). Idempotente (DONE) e reentrante (rc 75 -> requeue).

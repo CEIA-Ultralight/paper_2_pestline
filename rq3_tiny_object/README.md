@@ -1,68 +1,40 @@
-# RQ3 — Transferência: métodos de tiny-object detection em YOLO26 E2E sobre armadilhas
+# RQ3 — Escala: métodos tiny-object da literatura aérea em YOLO26 end-to-end
 
-**Pergunta.** Losses/label assignment para tiny objects validados em imagens aéreas (NWD, GCD, RFLA) e inferência
-fatiada (SAHI) transferem para insetos de ~44 px em armadilhas adesivas com um detector NMS-free end-to-end
-(YOLO26m, Ultralytics 8.4.142)?
+**Pergunta.** NWD, RFLA, GCD, Wise-IoU, cabeça P2, entrada em 2560 px, YOLO11m e inferência fatiada (SAHI/TTA/WBF) transferem das imagens aéreas para insetos de ≈ 44 px em armadilhas adesivas, com um detector NMS-free end-to-end?
 
-**Hipótese (a testar honestamente).** Não transferem: os ganhos reportados vêm de benchmarks aéreos
-(AI-TOD, DOTA, VisDrone) com detectores anchor-based/two-stage; em YOLO26 E2E com objetos ~44 px o efeito
-fica dentro da variância entre seeds. Resultado negativo é publicável como tal.
+## Resultado (TEST de 73 imagens, 3 seeds, controle E0 da mesma campanha)
 
-> **⚠️ 2026-10-18 — bug de unidade do NWD na loss (PAPER_FACTS §12.1).** O Ultralytics passa ao `BboxLoss.forward`
-> caixas em unidades de grid; com C = 44 o NWD da loss saturava (≈0,99). Todos os E10/E11(w=0,75)/E12 e a ablação
-> "NWD só loss" foram afetados (E10 = NWD só no assigner + CIoU ×0,5; colapso do E12 = artefato). Fix:
-> `FLYDET_NWD_LOSS_UNITS=px` (default `grid` = legado). Rerun na dgx1: `E15_nwdfix_w0.5_s{0,1,2}` e
-> `E16_nwdpure_w1.0_px_s0` (fila em `dgx1/FILA_RQ3_DGX1.md`). O estado atual da RQ3 está em PAPER_FACTS §12; esta
-> página tem partes desatualizadas.
+Cada campanha roda em um hardware e tem o seu E0; os números nunca são misturados entre campanhas.
 
-## O que já temos (VAL mAP50, `results.csv` Ultralytics, protocolo idêntico, single-seed)
+| Campanha | GPU | Conteúdo | CSVs | Fatos |
+|---|---|---|---|---|
+| (a) ovx | L40S | E0 + GCD, NWD+RFLA, P2, WIoU, 2560 px, NWD (assigner / assigner+loss), YOLO11m (1 seed), SAHI/TTA/WBF | `v9_ovx_*.csv` | `docs/PAPER_FACTS.md` §13 |
+| (b) dgx1 | V100 | E0 × NWD com a loss em **pixels** (E15), NWD puro (E16, 1 seed) | `v9_dgx1_nwd_*.csv` | §12, §12.1, §12.2 |
+| (c) cadeia G | H100 | NWD ajustado (w, C): G0 controle, G1 w0,5/C22, G2 w1,0/C44, G3 w0,5/C88 (2 seeds) † | `v9_g_tuned_*.csv` | §14 |
 
-> **Verificado no W&B em 2026-09-26** (`results/nwd_sweep_single_seed.csv`, `results/runs.md`): sob o protocolo
-> verificável (summary W&B, mesma validação final) **E10 0,8544 < E0 0,8605** — o "+1,4 pp" abaixo só existe comparando
-> max-over-epochs do E10 com `best.pt` do E0 e **não é claim** (DECISIONS 2026-09-25). A cadeia 33015 **abortou**:
-> `E10_nwd_seed0/1/2` têm summary idêntico ao E10 (todas seed 0), `E0_baseline_seed1` crashed, E0 s2 / E7 / E14 / TTA-WBF
-> nunca rodaram. Treinos duram **0,7–1,3 h** cada (não 6–10 h). Seção 5.3 escrita com estes dados (manuscript 77459a1).
+† Na campanha (a) e na cadeia G a loss do NWD usa unidades de grid (bug de unidade do Ultralytics, `docs/PAPER_FACTS.md` §12.1), o que satura o NWD na loss; só a campanha (b) usa a correção (`FLYDET_NWD_LOSS_UNITS=px`).
 
-| Exp | Variante | mAP50 | Job / onde |
-|---|---|---:|---|
-| E0 | baseline CIoU | 0,8565 | `../common/slurm/E0_yolo26m_baseline.sh` |
-| E10 | NWD w=0,5, C=44 | 0,8706 (+1,4) | 32933 · `slurm/E10_yolo26m_nwd.sh` |
-| E11 | NWD w=0,75 | 0,8642 | 32947 · `slurm/E10x_chain.sh` |
-| E12 | NWD w=1,0 (sem CIoU) | 0,6719 — **colapso** | 32947 |
-| E10b | GCD w=0,5 | 0,8619 (mAP50:95 **0,6261**, melhor de todos) | 32947 · `slurm/E10b_yolo26m_gcd.sh` |
-| E13 | multi_scale 1920 | **CUDA OOM** | `slurm/E13_yolo26m_multiscale.sh` |
-| SAHI | inferência fatiada (TEST F1) | 66,2 % vs 73,2 % baseline — **piorou** (FP nas bordas) | `slurm/E2_eval_sahi.sh`, `baseline/fly-det/fly_det/sahi_inference.py` |
-| Treino em tiles 512 + aval. foto inteira | TEST F1 | 73,2 % — igual | `slurm/E2_yolo26m_sahi.sh` |
-| TTA + WBF | TEST F1 | 75,4–75,6 %, 3,7× custo — sem ganho | `eval_wbf_tta.py`, `ensemble_tta.py`, `slurm/tta_wbf_eval.sh`, `slurm/E3_ensemble_tta.sh` |
+- Nenhuma variante melhora a acurácia de espécie do controle (diferenças de −3,8 a +0,3 pp); NWD+RFLA é −8,8 pp por seeds instáveis e NWD puro não converge.
+- Nenhuma variante aumenta o recall abaixo de 32 px. SAHI, TTA e ensemble não superam o detector em resolução nativa.
+- O ajuste foi feito só no NWD, então o resultado é "sem ganho detectado aqui", não prova de ausência de ganho.
 
-Implementação: `patches/nwd_patch.py` — `(1−w)·CIoU + w·NWD` em `BboxLoss.forward` + `TaskAlignedAssigner.iou_calculation`,
-C = 44 px (média √wh dos 59.346 boxes de treino); `patches/gcd_patch.py`; `patches/rfla_patch.py`
-(`FLYDET_RFLA=1`, raio `max(2·stride, lado/2)`). `train_nwd.py` aplica o patch por env (`FLYDET_NWD_MODE`, `FLYDET_NWD_W`)
-e chama o trainer do `fly_det`. Testes: `../tests/test_nwd_patch.py` (7 testes CPU).
+## Implementação
 
-## O que falta
+`patches/nwd_patch.py` (NWD no assigner e na loss, `(1−w)·CIoU + w·NWD`, C em px), `patches/gcd_patch.py`, `patches/rfla_patch.py`; `train_nwd.py` aplica os patches por variáveis de ambiente (`FLYDET_NWD_MODE`, `FLYDET_NWD_W`, `FLYDET_NWD_LOSS_UNITS`, `FLYDET_RFLA`, `FLYDET_SEED`) e chama o trainer do `fly_det`. `ensemble_tta.py` e `eval_wbf_tta.py` avaliam TTA/WBF.
 
-- [ ] **⚠️ Corrigir o bug de seed em `train_nwd.py`**: a cadeia E10y (job 33015) treinou "seeds 0/1/2" todas com
-      seed 0 — o `--seed` não chega ao Ultralytics. Corrigir e cobrir com teste antes de qualquer rerun.
-- [ ] **Rerun 3×3**: E0 seeds {0,1,2} vs E10 (NWD w=0,5) seeds {0,1,2}, mesma receita (150 ép., batch 8,
-      imgsz 1920, patience 30) → média ± std VAL e **uma** avaliação no TEST por variante. É o caminho crítico
-      (5 treinos novos de ~1 h em H100 ≈ 6 GPU-h). Orquestrador base: `slurm/E10y_full_chain.sh`.
-- [ ] E14 (NWD + RFLA) e E7 (yolo26l + NWD) — **não rodaram** no 33015 (verificado W&B). Decidir se entram
-      (pelo menos 1 seed de RFLA para citar; ≈ 1 GPU-h cada).
-- [x] Exportar o sweep single-seed existente → `results/nwd_sweep_single_seed.csv`, `results/sahi_tta_single_seed.csv` (analyst, 2026-09-26).
-- [x] Protocolo de SAHI/tiles/TTA-WBF/NWD registrado na Seção 4.3 (writer, manuscript 77459a1).
-- [ ] Verificar se o "+1,4 pp" do E10 sobrevive: se |Δ| < std, reportar como **sem efeito** (tese do paper).
-- [ ] Análise de por quê: distribuição de IoU/NWD nos positivos do assigner, curva de recall por faixa de tamanho
-      (<32 / 32–48 / >48 px) E0 vs E10 → `results/recall_by_size.csv`.
-- [ ] Exportar métricas do W&B → `results/nwd_3x3.csv` (run, seed, variante, mAP50, mAP50:95, recall/precisão
-      por espécie VAL/TEST).
-- [ ] Registrar o protocolo do SAHI (slice, overlap, merge) e o de TTA/WBF na Seção 4.
-- [ ] Figura: `fig_nwd_seeds.pdf` (boxplot mAP50 por seed, E0 vs E10) e `fig_recall_by_size.pdf`.
+| Etapa | Arquivo |
+|---|---|
+| Campanha (a) L40S | `ovx/ovx_queue.sbatch`, `ovx/ovx_infer.sbatch`, `slurm/chain_E_rq3_v9.sh`, `slurm/chain_F_rq3_extras_v9.sh` |
+| Campanha (b) V100 | `dgx1/` (Dockerfile, fila, `FILA_RQ3_DGX1.md`) |
+| Cadeia G (H100) | `slurm/chain_G_rq3_tuned_h100.sh`, `slurm/eval_G_png.sh` |
+| Cadeias B200 e variantes antigas | `slurm/chain_A_detectors.sh`, `chain_C_extra.sh`, `E*.sh` (histórico) |
+| Análise | `common/analysis/rq3_v9_analysis.py`, `rq3_v9_dgx1_analysis.py`, `rq3_g_tuned_analysis.py`, `rq3_ovx_infer_csv.py` |
+| Testes (CPU) | `tests/test_nwd_patch.py`, `test_wiou_patch.py`, `test_train_nwd_seed.py`, `test_eval_wbf_tta.py` |
 
-## Saídas esperadas em `results/`
+## `results/`
 
-- `nwd_sweep_single_seed.csv` (o que já existe acima), `nwd_3x3.csv`, `recall_by_size.csv`, `sahi_tta.csv`.
+Os arquivos `v9_*` são os vigentes. Os demais (`nwd_sweep_single_seed.csv`, `nwd_3x3.csv`, `sahi_*`, `tiny_*`, `recall_by_size.csv`, `tta_vanilla_multiseed_PENDENTE_validacao.csv`) vêm das campanhas preliminares em DS-F2_v8.1.1 (H100/B200) e são mantidos como histórico; **não entram no artigo**. `runs.md` liga job Slurm → run W&B (`paper2-rq3-tiny-object`).
 
-## Status 2026-10-19 — campanha ovx (L40S) concluída
-E0 + E11 GCD, E14 NWD+RFLA, E1 P2, E20 WIoU, E21 2560, E15/E16 (escopo NWD) × 3 seeds, E22 YOLO11m s0 (single-seed), SAHI/TTA/WBF nos 3 E0 — todos TEST.
-Resultado: **nenhuma variante melhora o E0**; E14 negativo/instável (−8,8 pp, s1 divergiu). CSVs: `results/v9_ovx_{runs,summary,size_bins,paired,sahi_tta}.csv`; números em `docs/PAPER_FACTS.md` §13. Não rodado: E10 aqui, E7, E22 s1/s2. Pendente do autor: figuras e texto do manuscrito (`manuscript/` não editado).
+## Limitações declaradas
+
+Hiperparâmetros padrão (só o NWD foi ajustado: três configurações), três seeds, um conjunto de teste de 73 imagens com IC de ≈ ±2 pp; efeitos menores que isso não são resolvidos. YOLO11m e NWD puro têm uma seed. O mAP@50:95 não foi reportado para todas as variantes.

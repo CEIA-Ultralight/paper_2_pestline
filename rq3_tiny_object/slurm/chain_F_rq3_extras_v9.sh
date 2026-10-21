@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # chain_F_rq3_extras_v9.sh — RQ3 extras na v9.0.5 (b200n1), 3 seeds por variante, 1 job sequencial.
-# Plano: docs/PLANO_FINAL_2026-10-16.md (bloco A1/A2). Base: chain_C_extra.sh.
+# Plano: docs/archive/PLANO_FINAL_2026-10-16.md (bloco A1/A2). Base: chain_C_extra.sh.
 #   B2 Wise-IoU v3 s{0,1,2} | B1 E0 @2560 batch 4 s{0,1,2} | B3 YOLO11m s0 | C1 NWD scope loss/assigner s{0,1,2} | C2 yolo26l s{1,2}
 # Receita identica a E0 (train_detector_b200.sh). Idempotente (DONE) e reentrante (rc 75 -> requeue).
 # Pre-requisito: E0_s{0,1,2}/best.pt em $RUNS_ROOT (campanha v9).

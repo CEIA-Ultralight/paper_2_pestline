@@ -290,10 +290,10 @@ for key, pl in (("detector", "YOLO_E0"), ("baseline", "YOLO_E0+ConvNeXt-T_CE"), 
         addv(pl, "—", f"ms_img_{stat}", num(v * 1000) if v else "", "ms", "H100 FP32, imagem decodificada, e2e detector(+classificador)", pf)
 # cobertura (só no .md)
 addv("propostas_YOLO_E0", "—", "cobertura_class_agnostic_gt", "94.91", "%", "conf≥0,001, IoU≥0,5; 4.197 propostas; NÃO está no summary W&B", "94,91",
-     origem="docs/CASCADE_RESULTS_20260909.md (report.md do job 32088, não acessível aqui)")
+     origem="docs/archive/CASCADE_RESULTS_20260909.md (report.md do job 32088, não acessível aqui)")
 addv("propostas_YOLO_E0", "—", "cobertura_class_agnostic_especies", "97.89", "%", "idem", "97,89",
-     origem="docs/CASCADE_RESULTS_20260909.md")
-addv("propostas_YOLO_E0", "—", "n_propostas", "4197", "contagem", "", "4.197", origem="docs/CASCADE_RESULTS_20260909.md")
+     origem="docs/archive/CASCADE_RESULTS_20260909.md")
+addv("propostas_YOLO_E0", "—", "n_propostas", "4197", "contagem", "", "4.197", origem="docs/archive/CASCADE_RESULTS_20260909.md")
 CV_HDR = ["pipeline", "politica", "metrica", "valor", "unidade", "split", "n_gt_especies", "n_gt_total", "n_imgs", "job", "seed_det", "seed_clf",
           "valor_paper_facts", "origem", "wandb_run", "observacao"]
 write("rq2_cascade/results/cascade_val_single_seed.csv", CV_HDR, cv_rows)
