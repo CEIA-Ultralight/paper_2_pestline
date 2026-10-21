@@ -416,6 +416,13 @@ Fonte: `rq1_data/results/lot_profile.csv` (gerador `common/analysis/lot_profile.
 - DS-ORG no L2+ORG: 1.497 − 869 = 628 imagens (≈42% do treino, §11).
 - Manuscrito (Tabela 1, §3): nomes de lote/versão removidos; degraus L0–L3 usados em todas as RQs (decisão do autor, 2026-10-21).
 
+## 11c3. Checagem de vazamento por placa (layout dos insetos; CPU; 2026-10-21)
+Fonte: `rq1_data/results/plate_match_best.csv` (gerador `common/analysis/plate_match.py`) e `rq1_data/results/plate_match_calib.csv` (`common/analysis/plate_match_calib.py`). SIFT só dentro das caixas de insetos anotadas (classes 0–5) + homografia RANSAC (5 px); originais apenas (sem aug/copy-paste); TEST × (TRAIN+VAL), VAL × TRAIN; 125 imagens de avaliação.
+- Melhor par de cada imagem de avaliação: máx. **46** inliers; 9 imagens com ≥ 28 (todas inspecionadas visualmente: placas diferentes — códigos/insetos distintos; o "hub" `v8_000070` é a placa F19 densa com ~75 moscas).
+- Controle positivo (refoto sintética de cada TEST: perspectiva ±6%, escala 0,85–1, giro 180° em metade, brilho/contraste): mediana **148**, mín. 28, **67/73 > 46**.
+- TRAIN × TRAIN (melhor par): mediana 13, máx. 63 (pares com o hub).
+- Leitura: nenhuma placa compartilhada entre splits detectada; não exclui placas esparsas nem refotos após novas capturas. Manuscrito: §3 e Conclusão ("Threats to validity").
+
 ## 11d. Variantes da cascata (pós-processamento, CPU) — rodada 6, M2
 Fonte: `rq2_cascade/results/v9_cascade_variants{,_summary}.csv`; gerador `common/analysis/rq2_cascade_variants.py`; entradas `per_image_preds.jsonl` de `cascade_cross_{val,test}` (E0 s0–2 × CE s42/84/126 = 9 pares, copiadas da B200; avaliação original na B200). **Sem GPU nova; multi-seed (9 pares não independentes); w escolhido na VAL (que também escolheu os best.pt) e aplicado ao TEST.**
 Acurácia de espécie (all-GT), TEST, média dos 9 pares: single 0,8223; cascata (relabel total) 0,8135 (Δ −0,9 pp, IC95 imagem [−2,9; +1,2]); **species4** (reclassifica só propostas de espécie entre as 4) 0,8079 (Δ −1,4 pp [−2,9; +0,1]); **fusão tardia** w=0,55: 0,8353 (**Δ +1,3 pp, IC95 [+0,3; +2,3], 9/9 pares > single**); fusão restrita às 4 espécies (w=0,70): 0,8226 (Δ +0,0 pp [−0,03; +0,1]).
