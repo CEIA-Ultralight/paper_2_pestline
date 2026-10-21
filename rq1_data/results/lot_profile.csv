@@ -1,0 +1,16 @@
+lot,split,orig_images,ins_only,max_species_per_image
+v5.1,test,29,0,32
+v5.1,train,58,0,42
+v5.1,val,10,0,30
+v6.0,test,9,0,35
+v6.0,train,66,0,32
+v6.0,val,8,0,27
+v7,test,7,2,19
+v7,train,56,4,34
+v7,val,7,2,25
+v8,test,10,2,19
+v8,train,80,17,75
+v8,val,10,1,66
+v9,test,18,2,38
+v9,train,139,31,77
+v9,val,17,7,42

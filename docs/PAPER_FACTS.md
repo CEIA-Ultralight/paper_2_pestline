@@ -9,7 +9,7 @@
 > **Auditoria 2026-09-26 (analyst):** todos os números de §2–§4 foram re-derivados do W&B (`pestline/fly-species`, runs `EVAL_E0_cascade_val_20260909T134157Z` e `test-campaign-036ef018`) e batem com os `.md` a ≤0,05 p.p. (exceções de arredondamento listadas em §8). Os números de §1 marcados `results.csv` **não são verificáveis neste nó** (`/raid/user_marcospaulo/fly-det` e `flydet_runs` ausentes em dgx-B200-1); o que existe no W&B é o *summary* (validação final do `best.pt`), que é outro protocolo — ver tabela 1b.
 
 > **Mapa de seções (leia antes de citar).** A numeração não é linear porque o arquivo foi crescendo por campanhas; os números do manuscrito citam estas seções, então não foram renumeradas.
-> - **Vigentes (v9, DS-F2_v9.0.5; TEST 73 imgs / 1210 inst.):** RQ1 §11, §11b, §11c · RQ2 §10 (10.1–10.6c), §11d–§11f · RQ3 §12 (V100: E0 × NWD), §12.1–12.2 (bug de unidade e rerun em px), §13 (L40S: variantes tiny-object), §14 (cadeia G, H100: NWD ajustado).
+> - **Vigentes (v9, DS-F2_v9.0.5; TEST 73 imgs / 1210 inst.):** RQ1 §11, §11b, §11c, §11c2 · RQ2 §10 (10.1–10.6c), §11d–§11f · RQ3 §12 (V100: E0 × NWD), §12.1–12.2 (bug de unidade e rerun em px), §13 (L40S: variantes tiny-object), §14 (cadeia G, H100: NWD ajustado).
 > - **Históricas (não citar no paper):** §0–§8 (H100, single-seed, DS-F2_v8.1.1) e §9 (B200, DS-F2_v8.1.1); mantidas só por rastreabilidade.
 > - Nunca misturar hardware (B200/H100/L40S/V100) na mesma tabela: cada campanha de RQ3 tem o seu controle E0.
 
@@ -405,7 +405,16 @@ Fonte: `rq1_data/results/ladder_composition.csv` (gerador `common/analysis/ladde
 | v7 | 56 | 14 | 70 | 70 |
 | v8 | 80 | 172 | 252 | 252 |
 | v9 | 139 | 234 | 373 | 373 |
-L0=103; L1=103+71+70=244; L2=244+252+373=869; L3=1738 = L2 + 869 copy-paste (um por imagem real). Os "97, 83, 70, 100, 174 imagens por lote" do texto antigo não tinham rastro e foram substituídos. (O "607" antigo em §9/§14 foi corrigido para 869, a contagem por nome de arquivo e por construção L3 = 2×869.)
+L0=103; L1=103+71+70=244; L2=244+252+373=869; L3=1738 = L2 + 869 copy-paste (um por imagem real). Os "97, 83, 70, 100, 174 imagens por lote" = originais de train + val + test do lote (ex.: 58+10+29=97); rastro em `lot_profile.csv` (§11c2). (O "607" antigo em §9/§14 foi corrigido para 869, a contagem por nome de arquivo e por construção L3 = 2×869.)
+
+## 11c2. Perfil das imagens originais por lote e degrau (DS-F2_v9.0.5) — 2026-10-21
+Fonte: `rq1_data/results/lot_profile.csv` (gerador `common/analysis/lot_profile.py`, CPU; exclui aug de imagem e copy-paste).
+- Só-INS (≥1 INS, 0 MD–MF) por lote, todos os splits: v5.1 0, v6.0 0, v7 8, v8 20, v9 40. TEST: 6 (v7 2, v8 2, v9 2).
+- Máx. instâncias de espécie/imagem por lote (todos os splits): 42, 35, 34, 75, 77.
+- Por degrau (só TRAIN, o que o degrau adiciona): originais L0 58 / L1 +122 / L2 +219; só-INS 0 / +4 / +48; máx. espécies/img 42 / 34 / 77.
+- VAL por coleção de degrau: 10 (L0) / 15 (L1) / 27 (L2) = 52; TEST: 29 / 16 / 28 = 73.
+- DS-ORG no L2+ORG: 1.497 − 869 = 628 imagens (≈42% do treino, §11).
+- Manuscrito (Tabela 1, §3): nomes de lote/versão removidos; degraus L0–L3 usados em todas as RQs (decisão do autor, 2026-10-21).
 
 ## 11d. Variantes da cascata (pós-processamento, CPU) — rodada 6, M2
 Fonte: `rq2_cascade/results/v9_cascade_variants{,_summary}.csv`; gerador `common/analysis/rq2_cascade_variants.py`; entradas `per_image_preds.jsonl` de `cascade_cross_{val,test}` (E0 s0–2 × CE s42/84/126 = 9 pares, copiadas da B200; avaliação original na B200). **Sem GPU nova; multi-seed (9 pares não independentes); w escolhido na VAL (que também escolheu os best.pt) e aplicado ao TEST.**
