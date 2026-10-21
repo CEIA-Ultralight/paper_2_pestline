@@ -1,0 +1,7 @@
+split,group,n,mean_px,median_px,frac_below_32
+train,species,6334,29.3,28.6,0.55
+train,all,16872,40.2,31.0,0.509
+val,species,856,26.6,19.9,0.648
+val,all,2359,38.5,24.8,0.574
+test,species,1210,31.2,31.7,0.507
+test,all,3494,38.1,30.3,0.519

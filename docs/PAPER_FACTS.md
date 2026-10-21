@@ -424,6 +424,12 @@ Fonte: `rq1_data/results/plate_match_best.csv` (gerador `common/analysis/plate_m
 - TRAIN × TRAIN (melhor par): mediana 13, máx. 63 (pares com o hub).
 - Leitura: nenhuma placa compartilhada entre splits detectada; não exclui placas esparsas nem refotos após novas capturas. Manuscrito: §3 e Conclusão ("Threats to validity").
 
+## 11c4. Tamanho dos objetos no dataset final (DS-F2_v9.0.5; CPU; 2026-10-21)
+Fonte: `rq1_data/results/species_size.csv` (gerador `common/analysis/species_size.py`); √(w·h) em px na imagem 1920×1080; train inclui aug/copy-paste do L3.
+- Espécies (MD/MV/MC/MF): train n=6.334, média **29,3**, mediana 28,6, 55% < 32 px; VAL n=856, média 26,6; **TEST n=1.210, média 31,2, mediana 31,7, 50,7% < 32 px (613)**.
+- Todas as classes: train n=16.872, média **40,2**; TEST média 38,1.
+- O C=44 px do NWD veio de snapshot anterior (todas as caixas); o "≈44 px" antigo do manuscrito foi corrigido para os valores acima (intro, §3, §5 RQ3, §4.3).
+
 ## 11d. Variantes da cascata (pós-processamento, CPU) — rodada 6, M2
 Fonte: `rq2_cascade/results/v9_cascade_variants{,_summary}.csv`; gerador `common/analysis/rq2_cascade_variants.py`; entradas `per_image_preds.jsonl` de `cascade_cross_{val,test}` (E0 s0–2 × CE s42/84/126 = 9 pares, copiadas da B200; avaliação original na B200). **Sem GPU nova; multi-seed (9 pares não independentes); w escolhido na VAL (que também escolheu os best.pt) e aplicado ao TEST.**
 Acurácia de espécie (all-GT), TEST, média dos 9 pares: single 0,8223; cascata (relabel total) 0,8135 (Δ −0,9 pp, IC95 imagem [−2,9; +1,2]); **species4** (reclassifica só propostas de espécie entre as 4) 0,8079 (Δ −1,4 pp [−2,9; +0,1]); **fusão tardia** w=0,55: 0,8353 (**Δ +1,3 pp, IC95 [+0,3; +2,3], 9/9 pares > single**); fusão restrita às 4 espécies (w=0,70): 0,8226 (Δ +0,0 pp [−0,03; +0,1]).
