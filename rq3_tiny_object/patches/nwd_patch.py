@@ -35,6 +35,10 @@ Configuracao por variaveis de ambiente (com defaults do E10):
                                     "px"   = CORRETO (E15+): multiplica as caixas pelo stride antes
                                              do NWD, igual ao assigner (que ja recebe pixels).
                                     A CIoU e o assigner nao mudam (CIoU e invariante a escala).
+                                    Sem default silencioso: com modo nwd/gcd e scope loss/both, apply_nwd_patch
+                                    aborta se FLYDET_NWD_LOSS_UNITS nao estiver definido (2026-10-26; a
+                                    cadeia G rodou em grid por omissao).
+  FLYDET_REQUIRE_PX (default 0)   — "1" aborta se a loss nao estiver em px (cadeias novas).
   FLYDET_NWD_DIAG (default 0)     — N>0 imprime, nas N primeiras chamadas da loss, o max do
                                     target como chega e a media do NWD (diagnostico de unidade).
 
@@ -181,11 +185,14 @@ def _patched_bbox_loss_forward(
             nwd = tiny_similarity(pred_bboxes[fg_mask], target_bboxes[fg_mask])
         if _diag_calls < NWD_DIAG:
             _diag_calls += 1
-            print(f"[nwd_diag] call={_diag_calls} loss_units={NWD_LOSS_UNITS} "
-                  f"target_max_in={target_bboxes[fg_mask].max().item():.1f} "
-                  f"target_max_px={(target_bboxes * stride)[fg_mask].max().item():.1f} "
-                  f"nwd_mean={nwd.mean().item():.4f} nwd_min={nwd.min().item():.4f} "
-                  f"ciou_mean={iou.mean().item():.4f} n_fg={int(fg_mask.sum())}", flush=True)
+            msg = (f"[nwd_diag] call={_diag_calls} loss_units={NWD_LOSS_UNITS} "
+                   f"target_max_in={target_bboxes[fg_mask].max().item():.1f} "
+                   f"target_max_px={(target_bboxes * stride)[fg_mask].max().item():.1f} "
+                   f"nwd_mean={nwd.mean().item():.4f} nwd_min={nwd.min().item():.4f} "
+                   f"ciou_mean={iou.mean().item():.4f} n_fg={int(fg_mask.sum())}")
+            print(msg, flush=True)
+            with open("nwd_diag.log", "a", encoding="utf-8") as fh:  # cwd = WORK do run (gate do DONE)
+                fh.write(msg + "\n")
         iou = (1.0 - NWD_W) * iou + NWD_W * nwd
         loss_iou = ((1.0 - iou) * weight).sum() / target_scores_sum
 
@@ -239,6 +246,13 @@ def apply_nwd_patch() -> dict:
         return {"nwd": False, "nwd_mode": "off"}
     scope = "loss" if mode == "wiou" else resolve_scope()  # WIoU nao tem analogo no assigner
     units = resolve_loss_units()
+    if mode in ("nwd", "gcd") and scope != "assigner":
+        if not os.environ.get("FLYDET_NWD_LOSS_UNITS", "").strip():
+            raise RuntimeError(
+                "[nwd_patch] FLYDET_NWD_LOSS_UNITS nao definido: use px (correto) ou grid (so para reproduzir runs legados)"
+            )
+        if os.environ.get("FLYDET_REQUIRE_PX", "0") == "1" and units != "px":
+            raise RuntimeError(f"[nwd_patch] FLYDET_REQUIRE_PX=1 mas loss_units={units!r}")
     cfg = {"nwd": True, "nwd_w": NWD_W, "nwd_c": NWD_C, "nwd_mode": mode, "nwd_scope": scope,
            "nwd_loss_units": units}
     if _PATCHED:

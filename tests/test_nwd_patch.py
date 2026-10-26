@@ -14,6 +14,7 @@ import torch
 
 os.environ.setdefault("FLYDET_NWD_W", "0.5")
 os.environ.setdefault("FLYDET_NWD_C", "44.0")
+os.environ.setdefault("FLYDET_NWD_LOSS_UNITS", "px")  # obrigatorio com scope loss/both
 
 # sys.path (rq3_tiny_object/patches) e configurado em tests/conftest.py
 from nwd_patch import apply_nwd_patch, is_patched, nwd_similarity
@@ -233,9 +234,51 @@ class TestNWDLossUnits(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.mod.resolve_loss_units()
 
-    def test_default_loss_units_is_legacy_grid(self):
+    def _fresh_patch_state(self):
+        from ultralytics.utils.loss import BboxLoss
+        from ultralytics.utils.tal import TaskAlignedAssigner
+
+        saved = (BboxLoss.forward, TaskAlignedAssigner.iou_calculation, self.mod._PATCHED,
+                 os.environ.get("FLYDET_REQUIRE_PX"))
+        self.mod._PATCHED = False
+
+        def restore():
+            BboxLoss.forward, TaskAlignedAssigner.iou_calculation, self.mod._PATCHED = saved[:3]
+            if saved[3] is None:
+                os.environ.pop("FLYDET_REQUIRE_PX", None)
+            else:
+                os.environ["FLYDET_REQUIRE_PX"] = saved[3]
+
+        self.addCleanup(restore)
+
+    def test_missing_loss_units_fails_fast(self):
+        # sem default silencioso: a cadeia G rodou em grid por omissao
+        self._fresh_patch_state()
         os.environ.pop("FLYDET_NWD_LOSS_UNITS", None)
-        self.assertEqual(self.mod.resolve_loss_units(), "grid")
+        for scope in ("both", "loss"):
+            os.environ["FLYDET_NWD_SCOPE"] = scope
+            with self.assertRaises(RuntimeError, msg=scope):
+                self.mod.apply_nwd_patch()
+        os.environ.pop("FLYDET_NWD_SCOPE", None)
+
+    def test_require_px_rejects_grid(self):
+        self._fresh_patch_state()
+        os.environ["FLYDET_NWD_LOSS_UNITS"] = "grid"
+        os.environ["FLYDET_REQUIRE_PX"] = "1"
+        with self.assertRaises(RuntimeError):
+            self.mod.apply_nwd_patch()
+
+    def test_gcd_px_mode_matches_pixel_gcd_on_every_level(self):
+        from ultralytics.utils.metrics import bbox_iou
+
+        from gcd_patch import gcd_similarity
+
+        self.mod.NWD_MODE = "gcd"
+        for s in (8.0, 16.0, 32.0):
+            li, pd_px, gt_px = self._loss_iou("px", s)
+            ciou = bbox_iou(pd_px, gt_px, xywh=False, CIoU=True)
+            expected = (1.0 - (0.5 * ciou + 0.5 * gcd_similarity(pd_px, gt_px))).mean().item()
+            self.assertAlmostEqual(li, expected, places=5, msg=f"stride={s}")
 
 
 if __name__ == "__main__":

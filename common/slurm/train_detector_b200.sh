@@ -78,7 +78,7 @@ echo "============================== ${RUN_NAME} =============================="
 echo "Job:     ${SLURM_JOB_ID} @ ${SLURM_NODELIST:-?}  particao=${SLURM_JOB_PARTITION}"
 echo "Receita: ${MODEL} epochs=${EPOCHS} batch=${BATCH} imgsz=${IMGSZ} patience=${PATIENCE} save_period=${FLYDET_SAVE_PERIOD}"
 [[ -z "${MODEL_CFG}" ]] || echo "Arquitetura: ${MODEL_CFG} (pretrained=${MODEL})"
-echo "Seed:    FLYDET_SEED=${FLYDET_SEED}  NWD: mode=${FLYDET_NWD_MODE} w=${FLYDET_NWD_W} C=${FLYDET_NWD_C} scope=${FLYDET_NWD_SCOPE} rfla=${FLYDET_RFLA}"
+echo "Seed:    FLYDET_SEED=${FLYDET_SEED}  NWD: mode=${FLYDET_NWD_MODE} w=${FLYDET_NWD_W} C=${FLYDET_NWD_C} scope=${FLYDET_NWD_SCOPE} rfla=${FLYDET_RFLA} loss_units=${FLYDET_NWD_LOSS_UNITS:-<nao definido>} require_px=${FLYDET_REQUIRE_PX:-0}"
 echo "W&B:     ${WANDB_ENTITY}/${WANDB_PROJECT} run=${WANDB_RUN_NAME}"
 echo "WORK:    ${WORK}   inicio=$(date)"
 echo "========================================================================="
@@ -143,6 +143,23 @@ if cfg.get("nwd"):
                 torch.tensor([[[1., 1., 41., 41.]]*N]), torch.rand(B, N, 7), torch.tensor(5.0),
                 torch.ones(B, N, dtype=torch.bool), torch.tensor([1920., 1920.]), torch.tensor([8.0]))
     assert torch.isfinite(li) and torch.isfinite(ld)
+import os
+if (os.environ.get("FLYDET_REQUIRE_PX") == "1" and cfg.get("nwd") and cfg.get("nwd_mode") in ("nwd", "gcd")
+        and cfg.get("nwd_scope") != "assigner"):
+    # loss recebe caixas em grid (como no v8DetectionLoss): o termo NWD/GCD tem de bater com o calculo em pixels
+    import nwd_patch as P
+    from ultralytics.utils.metrics import bbox_iou
+    n = 4; gt = torch.tensor([[100., 100., 140., 140.]] * n); pd = gt + torch.tensor([4., 2.8, 4., 2.8])
+    for s in (8., 16., 32.):
+        st = torch.full((n, 1), s)
+        li, _ = P._patched_bbox_loss_forward(BboxLoss(reg_max=1), torch.zeros(1, n, 4), (pd / st)[None],
+                                             torch.full((n, 2), 15.), (gt / st)[None], torch.ones(1, n, 7) / 7,
+                                             torch.tensor(float(n)), torch.ones(1, n, dtype=torch.bool),
+                                             torch.tensor([1920., 1920.]), st)
+        sim = (1 - P.NWD_W) * bbox_iou(pd, gt, xywh=False, CIoU=True) + P.NWD_W * P.tiny_similarity(pd, gt)
+        exp = (1 - sim).mean().item()
+        assert abs(li.item() - exp) < 1e-4, f"loss NWD fora de pixels no stride {s}: {li.item()} vs {exp}"
+    print("[precheck] loss NWD/GCD em pixels: ok (strides 8/16/32)")
 print("PRECHECK_OK")
 PRECHECK
 
@@ -192,6 +209,31 @@ if ! step_done "${WORK}/test_eval_png/summary.json"; then
     echo "JOB→RUN ${WANDB_RUN_NAME_EVAL}"
 else
     echo "SKIP test_eval: ${WORK}/test_eval_png/summary.json"
+fi
+
+# Gate (FLYDET_REQUIRE_PX=1): config/diag em pixels e TEST completo antes do DONE
+if [[ "${FLYDET_REQUIRE_PX:-0}" == 1 ]]; then
+    python3 - "${WORK}" "${RUN_NAME}" <<'GATE' || { echo "ABORT: gate px/TEST falhou em ${RUN_NAME}"; _alert "ERROR gate ${RUN_NAME}"; exit 3; }
+import csv, json, re, sys
+from pathlib import Path
+work, run = Path(sys.argv[1]), sys.argv[2]
+cfg = json.loads((work / "nwd_config.json").read_text())
+if cfg.get("nwd") and cfg.get("nwd_mode") in ("nwd", "gcd") and cfg.get("nwd_scope") != "assigner":
+    assert cfg.get("nwd_loss_units") == "px", f"nwd_config: {cfg}"
+    lines = (work / "nwd_diag.log").read_text().splitlines()
+    assert lines, "nwd_diag.log vazio"
+    for ln in lines:
+        assert "loss_units=px" in ln, ln
+        t_in = float(re.search(r"target_max_in=([\d.]+)", ln).group(1))
+        t_px = float(re.search(r"target_max_px=([\d.]+)", ln).group(1))
+        assert t_px >= 7.9 * t_in, ln  # caixas da loss chegam em grid; px = grid * stride (>= 8)
+man = json.loads((work / "test_eval_png" / "manifest.json").read_text())
+assert man["images"] == 73, f"TEST com {man['images']} imagens"
+rows = list(csv.DictReader(open(work / "test_eval_png" / run / "single" / "label_only" / "per_instance.csv")))
+n_sp = sum(r["gt_class"] in ("MD", "MV", "MC", "MF") for r in rows)
+assert n_sp == 1210, f"{n_sp} instancias de especie"
+print(f"GATE_OK {run}: cfg={cfg} TEST 73 imgs / {n_sp} especie")
+GATE
 fi
 
 touch "${WORK}/DONE"
