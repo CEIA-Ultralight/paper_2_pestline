@@ -116,3 +116,6 @@ Fila `rq3_tiny_object/dgx1/wait_and_run.sh` → `run_queue.sh` (GPU 0), log da f
 | 2026-10-18 | idem | idem | idem | 0 | E16 NWD puro w=1,0, loss em px (exploratório) | `E16_nwdpure_w1.0_px_s0` | COMPLETED 17:36 (34 ép., best 4, 1,01 h — colapso) | idem |
 
 Notas (2026-10-19): `FILA_OK` 18/out 17:36; os 4 com early stop (patience 30), 0 Traceback/ABORT/NaN nos logs. CSVs gerados na dgx1 (`~/pestline/_out_rq3_v9/`) com o gerador estendido e copiados para cá; linhas E0/E10 idênticas às de 2026-10-16. IDs W&B dos 4 runs ainda não anotados.
+
+### Cadeia H — loss NWD/GCD em pixels (2026-10-27)
+Cadeia `rq3_tiny_object/slurm/chain_H_rq3_px_h100.sh` (braços H1–H7, seeds 0–2, controle G0) criada e testada em CPU; **nenhum job submetido**: `sbatch` do slogin-01 falhou com `I/O error writing script/environment to file` (disco `/` do login node em 99%) desde 2026-10-26. Retomada: `rq3_tiny_object/HANDOFF_RQ3_CHAIN_H.md`.

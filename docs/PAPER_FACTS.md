@@ -9,7 +9,7 @@
 > **Auditoria 2026-09-26 (analyst):** todos os números de §2–§4 foram re-derivados do W&B (`pestline/fly-species`, runs `EVAL_E0_cascade_val_20260909T134157Z` e `test-campaign-036ef018`) e batem com os `.md` a ≤0,05 p.p. (exceções de arredondamento listadas em §8). Os números de §1 marcados `results.csv` **não são verificáveis neste nó** (`/raid/user_marcospaulo/fly-det` e `flydet_runs` ausentes em dgx-B200-1); o que existe no W&B é o *summary* (validação final do `best.pt`), que é outro protocolo — ver tabela 1b.
 
 > **Mapa de seções (leia antes de citar).** A numeração não é linear porque o arquivo foi crescendo por campanhas; os números do manuscrito citam estas seções, então não foram renumeradas.
-> - **Vigentes (v9, DS-F2_v9.0.5; TEST 73 imgs / 1210 inst.):** RQ1 §11, §11b, §11c, §11c2 · RQ2 §10 (10.1–10.6c), §11d–§11f · RQ3 §12 (V100: E0 × NWD), §12.1–12.2 (bug de unidade e rerun em px), §13 (L40S: variantes tiny-object), §14 (cadeia G, H100: NWD ajustado).
+> - **Vigentes (v9, DS-F2_v9.0.5; TEST 73 imgs / 1210 inst.):** RQ1 §11, §11b, §11c, §11c2 · RQ2 §10 (10.1–10.6c), §11d–§11f · RQ3 §12 (V100: E0 × NWD), §12.1–12.2 (bug de unidade e rerun em px), §13 (L40S: variantes tiny-object), §14 (cadeia G, H100: só o controle G0 vale; loss legada em grid), §15 (cadeia H, H100: variantes com a loss em px vs G0; Holm de (a) só com comparações válidas).
 > - **Históricas (não citar no paper):** §0–§8 (H100, single-seed, DS-F2_v8.1.1) e §9 (B200, DS-F2_v8.1.1); mantidas só por rastreabilidade.
 > - Nunca misturar hardware (B200/H100/L40S/V100) na mesma tabela: cada campanha de RQ3 tem o seu controle E0.
 
@@ -510,3 +510,24 @@ Fila dgx1 18/out 09:04 → 17:36, os 4 runs `DONE`, `loss_units=px` confirmado n
 - **Leitura E15:** com o NWD em pixels na loss **e** no assigner, a identificação de espécie no TEST **não muda** (Δ macro-F1 +0,1 ± 2,8, IC do Δacc inclui 0) e a localização fina no VAL piora (mAP50:95 −1,5 ± 1,0, 3/3 negativos), igual ao E10 (§12: +0,5 ± 3,1 e −1,7 ± 0,4). O resultado nulo da §12 **não dependia do bug**. Objetos <32 px também não ganham (−1,8 ± 4,8). Efeitos por espécie com mesmo sinal em 3/3 seeds (exploratório, sem correção para múltiplas comparações): recall MV +3,1 ± 0,5 (também no E10: +4,6 ± 0,7 → provável efeito do assigner) e F1 MD −1,6 ± 1,2.
 - **Leitura E16:** o NWD puro em pixels **também colapsa** (best epoch 4, early stop na 34, `train/cls_loss` final 4,7 vs 0,5–0,9 nos E15). Logo, a frase da §12.1 "o colapso do E12 é artefato de implementação" **é forte demais**: o bug de unidade tornava o NWD da loss constante, mas sem o bug o NWD puro continua sem convergir (single-seed; E12 é outra campanha/dataset, magnitudes não comparáveis). Leitura segura: **"o NWD puro não converge nesta receita; um termo de sobreposição (CIoU) continua necessário"**, compatível com o gradiente ≈ 0 do NWD longe do alvo.
 - **Frase segura (substitui a anterior):** "Com o NWD calculado em pixels na loss e no assigner (3 seeds), nenhuma variante melhora a identificação de espécie além da variância entre seeds, e o NWD puro não converge."
+
+## 15. RQ3 cadeia H — variantes com a loss em pixels na H100 contra o G0 (2026-10-26; em execução)
+**Diagnóstico que motivou a cadeia (2026-10-26, CPU):**
+- **Cadeia G inválida para a loss:** `chain_G_rq3_tuned_h100.sh` não definia `FLYDET_NWD_LOSS_UNITS` (default `grid`); os `nwd_config.json` de G1–G3 nem têm a chave `nwd_loss_units` (patch anterior ao fix). O gate novo (`train_detector_b200.sh`) rejeita G1/G3 e aceita G0. **G0 (E0, sem patch) segue válido como controle** (82,2 ± 1,9; por seed 84,4/80,7/81,6; best epoch 51/64/53 de 81/94/83).
+- **GCD da campanha (a) (E11) também passou pela loss em grid:** o GCD é invariante à escala exceto pelo `clamp(min=1)`, que em grid vale 1 célula (8/16/32 px) → escala inflada para caixas < 1 célula (todas < 32 px em P5). Desvio menor, mas a linha sai da campanha (a); refeito como H7.
+- **"RFLA" implementado ≠ RFLA original:** `rfla_patch.py` troca `select_candidates_in_gts` por um pool circular de raio max(2·`stride_val`, lado/2) para caixas com lado < 2·`stride_val`, com `stride_val` = 16 escalar (= `self.stride[1]` no ultralytics 8.4.142) para todos os níveis, i.e., raio 32 px e limiar 32 px; substitui o piso de caixas pequenas do próprio ultralytics. Não usa campo receptivo gaussiano nem KLD. Descrever no texto como "RFLA-inspired candidate pool".
+- Assigner, CIoU, WIoU (só razões), P2, 2560 e YOLO11m não dependem da unidade da loss.
+
+**Holm de (a) só com comparações válidas** (`common/analysis/rq3_ovx_holm_valid.py` → `rq3_tiny_object/results/v9_ovx_paired_valid.csv`; m = 5; excluídos E14, E15_nwd_loss, E11_gcd). TEST, L40S, multi-seed (YOLO11m single-seed):
+
+| Braço | Δ vs E0 (pp) | p boot | p Holm (m=5) | p Holm antigo (m=8) |
+|---|---|---|---|---|
+| P2 | −2,75 | 0,0278 | 0,111 | 0,139 |
+| WIoU v3 | −0,33 | 0,694 | 1,00 | 1,00 |
+| imgsz 2560 | −3,77 | 0,0082 | **0,041** | 0,057 |
+| NWD só assigner | +0,28 | 0,845 | 1,00 | 1,00 |
+| YOLO11m (1 seed) | −1,16 | 0,503 | 1,00 | 1,00 |
+
+Leitura: com m = 5, o 2560 passa a ser uma perda significativa (Holm 0,041; usa batch 4); P2 continua não significativo após correção.
+
+**Cadeia H** (`rq3_tiny_object/slurm/chain_H_rq3_px_h100.sh`; h100n2, `flydet-train.sif`, ultralytics 8.4.142, receita E0; seeds 0/1/2; `FLYDET_NWD_LOSS_UNITS=px`, `FLYDET_REQUIRE_PX=1`, precheck numérico nos strides 8/16/32, gate antes do DONE): H1 NWD w0,5 C44 both · H2 NWD só loss · H3 NWD + pool RFLA · H4 C22 · H5 C88 · H6 NWD puro w1,0 · H7 GCD w0,5. Controle: G0 (pareado por seed). Regras pré-registradas: sem retry nem mudança de receita em divergência/colapso (best.pt pré-divergência, reportar como negativo). Gerador `common/analysis/rq3_h_px_analysis.py` → `v9_h_px_{runs,summary,paired,size_bins}.csv` (Holm entre os braços H). Resultados: _pendente_.
